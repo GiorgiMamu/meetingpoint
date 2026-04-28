@@ -51,6 +51,8 @@ def create_app(config_name='default'):
     app.logger.setLevel(logging.INFO)
     app.logger.info('MeetingPoint startup')
 
+    from app import models
+
     # Register blueprints
     from app.routes import main
     app.register_blueprint(main)

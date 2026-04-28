@@ -1,0 +1,105 @@
+to create db:
+flask --app run.py db init
+flask --app run.py db migrate -m "Initial schema - all models"
+flask --app run.py db upgrade
+
+it may give error. i think only upgrade command fill do, since i commit migrations folder too.
+idk. ask chatgpt if you have problem. camt help with that.
+
+make sure u have instance folder. and after this it will create
+meetingpoint.db. with 7 tables.
+
+
+in general here is our project structure:
+meetingpoint/
+├── app/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── routes.py
+│   ├── forms.py
+│   ├── utils.py
+│   ├── templates/
+│   └── static/
+│       ├── css/
+│       ├── js/
+│       └── uploads/
+├── tests/
+│   ├── __init__.py
+│   └── conftest.py
+├── logs/
+├── instance/
+├── venv/
+├── config.py
+└── run.py
+
+
+
+User
+- id (PK)
+- email (unique, not null)
+- password_hash (not null)
+- name (not null)
+- bio
+- location
+- interests (JSON string)
+- profile_photo
+- role (default: 'user') — values: 'user', 'admin'
+- is_active (default: True)
+- is_profile_public (default: True)
+- is_history_public (default: True)
+- created_at
+
+Event
+- id (PK)
+- host_id (FK -> User.id)
+- title
+- description
+- datetime
+- location_text
+- lat
+- lng
+- category
+- mood_tags (JSON string)
+- photo
+- capacity_min
+- capacity_max
+- price
+- is_public (default: True)
+- approval_mode (default: 'automatic') — values: 'automatic', 'manual'
+- participant_list_visible (default: True)
+- created_at
+
+Participation
+- id (PK)
+- user_id (FK -> User.id)
+- event_id (FK -> Event.id)
+- status (default: 'pending') — values: 'pending', 'approved', 'declined'
+- joined_at
+
+Message
+- id (PK)
+- event_id (FK -> Event.id)
+- user_id (FK -> User.id)
+- content
+- timestamp
+
+Bookmark
+- id (PK)
+- user_id (FK -> User.id)
+- event_id (FK -> Event.id)
+- created_at
+
+Follow
+- id (PK)
+- follower_id (FK -> User.id)
+- followed_id (FK -> User.id)
+- created_at
+
+Notification
+- id (PK)
+- user_id (FK -> User.id)  — who receives it
+- type  — values: 'invitation', 'approval', 'reminder', 'follow', 'cancellation'
+- message
+- is_read (default: False)
+- related_event_id (FK -> Event.id, nullable)
+- created_at

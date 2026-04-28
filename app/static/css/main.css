@@ -1,0 +1,42 @@
+:root {
+  /* 🌿 Forest (Primary) */
+  --forest-dark: #1F3D2B;
+  --forest-light: #4E7A5A;
+
+  /* 🌲 Moss (Secondary) */
+  --moss-dark: #3F5F45;
+  --moss-light: #8FAF8B;
+
+  /* ☁️ Sky (Accent) */
+  --sky-dark: #3A6F8F;
+  --sky-light: #A9D0E3;
+
+  /* 🌅 Sand (Backgrounds) */
+  --sand-dark: #C2A97A;
+  --sand-light: #F1E6C8;
+
+  /* 🌸 Rose (Highlights) */
+  --rose-dark: #A06A6A;
+  --rose-light: #E6B8B8;
+
+  /* 🌙 Charcoal (Text / Contrast) */
+  --charcoal-dark: #1C2733;
+  --charcoal-light: #5A6B7A;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.4rem;
+}
+
+footer {
+    border-top: 1px solid #dee2e6;
+}
+
+#cookie-banner {
+    z-index: 9999;
+}

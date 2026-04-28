@@ -7,3 +7,4 @@ logs/
 .env
 *.db
 .DS_Store
+.idea/

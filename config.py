@@ -9,8 +9,9 @@ class Config:
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')  # Remove the fallback
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # Remove the fallback
+    MAIL_DEFAULT_SENDER = MAIL_USERNAME
 
     LOG_FILE = 'logs/meetingpoint.log'
 

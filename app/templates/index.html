@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}MeetingPoint — Discover Local Events{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+    <h1>Welcome to MeetingPoint</h1>
+    <p class="lead">Discover local events and connect with people around you.</p>
+    {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('main.register') }}" class="btn btn-primary me-2">Get Started</a>
+        <a href="{{ url_for('main.login') }}" class="btn btn-outline-secondary">Log In</a>
+    {% endif %}
+</div>
+{% endblock %}
