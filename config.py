@@ -11,15 +11,26 @@ class Config:
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')  # Remove the fallback
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # Remove the fallback
-    MAIL_DEFAULT_SENDER = MAIL_USERNAME
+
+    # Secure session cookies
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_DURATION = 2592000  # 30 days in seconds
+
+    # Session timeout (permanent session lifetime)
+    from datetime import timedelta
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
 
     LOG_FILE = 'logs/meetingpoint.log'
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
     DEBUG = False
+    SESSION_COOKIE_SECURE = True  # HTTPS only in production
 
 config = {
     'development': DevelopmentConfig,

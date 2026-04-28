@@ -5,12 +5,13 @@ from app import db, login_manager
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
-
+    return db.session.get(User, int(user_id))
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-
+    __table_args__ = (
+        db.Index('ix_users_role', 'role'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -20,7 +21,7 @@ class User(UserMixin, db.Model):
     interests = db.Column(db.Text)  # stored as JSON string
     profile_photo = db.Column(db.String(255))
     role = db.Column(db.String(20), nullable=False, default='user')
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=False)
     is_profile_public = db.Column(db.Boolean, default=True)
     is_history_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -46,7 +47,10 @@ class User(UserMixin, db.Model):
 
 class Event(db.Model):
     __tablename__ = 'events'
-
+    __table_args__ = (
+        db.Index('ix_events_host_id', 'host_id'),
+        db.Index('ix_events_event_time', 'event_time'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     host_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String(150), nullable=False)
@@ -78,7 +82,10 @@ class Event(db.Model):
 
 class Participation(db.Model):
     __tablename__ = 'participations'
-
+    __table_args__ = (
+        db.Index('ix_participations_user_id', 'user_id'),
+        db.Index('ix_participations_event_id', 'event_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
@@ -91,7 +98,10 @@ class Participation(db.Model):
 
 class Message(db.Model):
     __tablename__ = 'messages'
-
+    __table_args__ = (
+        db.Index('ix_messages_event_id', 'event_id'),
+        db.Index('ix_messages_user_id', 'user_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -104,7 +114,9 @@ class Message(db.Model):
 
 class Bookmark(db.Model):
     __tablename__ = 'bookmarks'
-
+    __table_args__ = (
+        db.Index('ix_bookmarks_user_id', 'user_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
@@ -116,7 +128,10 @@ class Bookmark(db.Model):
 
 class Follow(db.Model):
     __tablename__ = 'follows'
-
+    __table_args__ = (
+        db.Index('ix_follows_follower_id', 'follower_id'),
+        db.Index('ix_follows_followed_id', 'followed_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -128,7 +143,9 @@ class Follow(db.Model):
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
-
+    __table_args__ = (
+        db.Index('ix_notifications_user_id', 'user_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)

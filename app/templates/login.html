@@ -8,11 +8,11 @@
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control") }}
+                {{ form.email(class="form-control", required=True, type="email", maxlength=150) }}
             </div>
             <div class="mb-3">
                 {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control") }}
+                {{ form.password(class="form-control", required=True, maxlength=128) }}
             </div>
             <div class="mb-3 form-check">
                 {{ form.remember(class="form-check-input") }}

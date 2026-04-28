@@ -8,7 +8,7 @@
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control") }}
+                {{ form.email(class="form-control", required=True, type="email", maxlength=150) }}
                 {% for error in form.email.errors %}
                     <div class="text-danger small">{{ error }}</div>
                 {% endfor %}

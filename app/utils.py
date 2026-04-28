@@ -2,7 +2,12 @@ from itsdangerous import URLSafeTimedSerializer
 from flask import current_app, url_for
 from flask_mail import Message
 from app import mail
+import bleach
 
+def sanitize(value):
+    if value is None:
+        return None
+    return bleach.clean(str(value).strip(), tags=[], strip=True)
 
 def generate_token(data, salt):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -21,14 +26,14 @@ def verify_token(token, salt, max_age=3600):
 def send_email(to, subject, body):
     if current_app.config.get('TESTING'):
         return
+    sender = current_app.config.get('MAIL_USERNAME')  # fetch at call time, not config load time
     msg = Message(
         subject,
-        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+        sender=sender,
         recipients=[to],
         body=body
     )
     mail.send(msg)
-
 
 def send_verification_email(user):
     token = generate_token(user.email, salt='email-confirm')
@@ -61,24 +66,5 @@ If you did not request this, ignore this email.
 
 
 
-from functools import wraps
-from flask import abort
-from flask_login import current_user
 
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin():
-            abort(403)
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def active_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_active:
-            abort(403)
-        return f(*args, **kwargs)
-    return decorated_function

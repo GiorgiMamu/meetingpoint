@@ -1,11 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db, bcrypt
+from app import db, bcrypt, limiter
 from app.models import User
 from app.forms import RegistrationForm, LoginForm, RequestPasswordResetForm, ResetPasswordForm
-from app.utils import (send_verification_email, send_password_reset_email,
-                       verify_token, generate_token)
+from app.decorators import admin_required, host_required
+
 import logging
+from app.utils import (send_verification_email, send_password_reset_email,
+                       verify_token, generate_token, sanitize)
 
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
@@ -18,17 +20,20 @@ def index():
 
 # --- REGISTRATION ---
 @main.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
     if form.validate_on_submit():
+        name = sanitize(form.name.data)
+        email = sanitize(form.email.data).lower()
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         user = User(
-            name=form.name.data,
-            email=form.email.data.lower(),
+            name=name,
+            email=email,
             password_hash=hashed_pw,
-            is_active=False  # inactive until email confirmed
+            is_active=False
         )
         db.session.add(user)
         db.session.commit()
@@ -41,6 +46,7 @@ def register():
 
 # --- EMAIL CONFIRMATION ---
 @main.route('/confirm/<token>')
+@limiter.limit("10 per minute")
 def confirm_email(token):
     email = verify_token(token, salt='email-confirm')
     if not email:
@@ -59,12 +65,13 @@ def confirm_email(token):
 
 # --- LOGIN ---
 @main.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower()).first()
+        user = User.query.filter_by(email=sanitize(form.email.data).lower()).first()
         if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
             if not user.is_active:
                 flash('Please confirm your email before logging in.', 'warning')
@@ -81,6 +88,7 @@ def login():
 
 # --- LOGOUT ---
 @main.route('/logout')
+@limiter.limit("10 per minute")
 @login_required
 def logout():
     logger.info(f'Logout: {current_user.email}')
@@ -91,12 +99,13 @@ def logout():
 
 # --- REQUEST PASSWORD RESET ---
 @main.route('/reset-password', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def request_password_reset():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RequestPasswordResetForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower()).first()
+        user = User.query.filter_by(email=sanitize(form.email.data).lower()).first()
         if user:
             send_password_reset_email(user)
             logger.info(f'Password reset requested: {user.email}')
@@ -107,6 +116,7 @@ def request_password_reset():
 
 # --- RESET PASSWORD ---
 @main.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -116,7 +126,7 @@ def reset_password(token):
         return redirect(url_for('main.request_password_reset'))
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=email).first_or_404()
+        user = User.query.filter_by(email=sanitize(email)).first_or_404()
         user.password_hash = bcrypt.generate_password_hash(
             form.password.data).decode('utf-8')
         db.session.commit()
@@ -128,27 +138,32 @@ def reset_password(token):
 
 # --- STATIC PAGES ---
 @main.route('/privacy')
+@limiter.limit("10 per minute")
 def privacy():
     return render_template('privacy.html')
 
 
 @main.route('/terms')
+@limiter.limit("10 per minute")
 def terms():
     return render_template('terms.html')
 
 
 # --- ERROR HANDLERS ---
 @main.app_errorhandler(403)
+@limiter.limit("10 per minute")
 def forbidden(e):
     return render_template('errors/403.html'), 403
 
 
 @main.app_errorhandler(404)
+@limiter.limit("10 per minute")
 def not_found(e):
     return render_template('errors/404.html'), 404
 
 
 @main.app_errorhandler(500)
+@limiter.limit("10 per minute")
 def server_error(e):
     logger.error(f'Server error: {e}')
     return render_template('errors/500.html'), 500
