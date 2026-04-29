@@ -2,110 +2,124 @@
 {% block title %}{{ title }} — MeetingPoint{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <h2 class="mb-4">{{ title }}</h2>
-    <form method="POST" enctype="multipart/form-data" id="event-form" novalidate>
-      {{ form.hidden_tag() }}
+    <div class="col-md-8">
+        <div class="card p-4 p-md-5">
+            <h2 class="mb-1">{{ title }}</h2>
+            <p class="text-muted small mb-4">Fill in the details for your event</p>
 
-      <div class="mb-3">
-        {{ form.title.label(class="form-label") }}
-        {{ form.title(class="form-control", maxlength=150) }}
-        {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-      </div>
+            <form method="POST" enctype="multipart/form-data" id="event-form" novalidate>
+                {{ form.hidden_tag() }}
 
-      <div class="mb-3">
-        {{ form.description.label(class="form-label") }}
-        {{ form.description(class="form-control", rows=4, maxlength=3000) }}
-        {% for e in form.description.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-      </div>
+                <h6 class="section-title mb-3">Basic Info</h6>
 
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          {{ form.event_time.label(class="form-label") }}
-          {{ form.event_time(class="form-control") }}
-          {% for e in form.event_time.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                <div class="mb-3">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control", maxlength=150, placeholder="Give your event a clear title") }}
+                    {% for e in form.title.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=4, maxlength=3000, placeholder="What's this event about? What should attendees expect?") }}
+                    {% for e in form.description.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        {{ form.event_time.label(class="form-label") }}
+                        {{ form.event_time(class="form-control") }}
+                        {% for e in form.event_time.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-select") }}
+                        {% for e in form.category.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form.mood_tags.label(class="form-label") }}
+                    {{ form.mood_tags(class="form-control", placeholder="e.g. chill, outdoor, beginner-friendly") }}
+                </div>
+
+                <h6 class="section-title mb-3 mt-4">Location</h6>
+
+                <div class="mb-3">
+                    {{ form.location_text.label(class="form-label") }}
+                    {{ form.location_text(class="form-control", maxlength=255, placeholder="Address or area name") }}
+                    {% for e in form.location_text.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        {{ form.lat.label(class="form-label") }}
+                        {{ form.lat(class="form-control", id="lat-field", placeholder="e.g. 41.6938") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.lng.label(class="form-label") }}
+                        {{ form.lng(class="form-control", id="lng-field", placeholder="e.g. 44.8015") }}
+                    </div>
+                </div>
+
+                <h6 class="section-title mb-3 mt-4">Details</h6>
+
+                <div class="mb-3">
+                    {{ form.photo.label(class="form-label") }}
+                    {{ form.photo(class="form-control", accept="image/*") }}
+                    {% for e in form.photo.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    {% if event and event.photo %}
+                        <div class="mt-2 d-flex align-items-center gap-3">
+                            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+                                 class="rounded" style="max-height:80px;">
+                            <span class="text-muted small">Current photo — upload a new one to replace it.</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        {{ form.capacity_min.label(class="form-label") }}
+                        {{ form.capacity_min(class="form-control", min=1, placeholder="e.g. 2") }}
+                        {% for e in form.capacity_min.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.capacity_max.label(class="form-label") }}
+                        {{ form.capacity_max(class="form-control", min=1, id="capacity-max", placeholder="e.g. 20") }}
+                        {% for e in form.capacity_max.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.price.label(class="form-label") }}
+                        {{ form.price(class="form-control", min=0, step="0.01", placeholder="0 = free") }}
+                        {% for e in form.price.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <h6 class="section-title mb-3 mt-4">Settings</h6>
+
+                <div class="mb-3">
+                    {{ form.approval_mode.label(class="form-label") }}
+                    {{ form.approval_mode(class="form-select") }}
+                </div>
+
+                <div class="mb-2 form-check">
+                    {{ form.is_public(class="form-check-input") }}
+                    {{ form.is_public.label(class="form-check-label") }}
+                    <div class="text-muted small">Uncheck to make this event private (invite only).</div>
+                </div>
+
+                <div class="mb-4 form-check">
+                    {{ form.participant_list_visible(class="form-check-input") }}
+                    {{ form.participant_list_visible.label(class="form-check-label") }}
+                    <div class="text-muted small">Show the participant list to other users.</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    {{ form.submit(class="btn btn-primary px-4") }}
+                    <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
-        <div class="col-md-6 mb-3">
-          {{ form.category.label(class="form-label") }}
-          {{ form.category(class="form-select") }}
-          {% for e in form.category.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-      </div>
-
-      <div class="mb-3">
-        {{ form.location_text.label(class="form-label") }}
-        {{ form.location_text(class="form-control", maxlength=255) }}
-        {% for e in form.location_text.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          {{ form.lat.label(class="form-label") }}
-          {{ form.lat(class="form-control", id="lat-field") }}
-        </div>
-        <div class="col-md-6 mb-3">
-          {{ form.lng.label(class="form-label") }}
-          {{ form.lng(class="form-control", id="lng-field") }}
-        </div>
-      </div>
-
-      <div class="mb-3">
-        {{ form.mood_tags.label(class="form-label") }}
-        {{ form.mood_tags(class="form-control", placeholder="e.g. chill, outdoor, beginner-friendly") }}
-      </div>
-
-      <div class="mb-3">
-        {{ form.photo.label(class="form-label") }}
-        {{ form.photo(class="form-control", accept="image/*") }}
-        {% for e in form.photo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        {% if event and event.photo %}
-          <div class="mt-2">
-            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                 class="img-thumbnail" style="max-height:120px;">
-            <div class="text-muted small">Current photo — upload a new one to replace it.</div>
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          {{ form.capacity_min.label(class="form-label") }}
-          {{ form.capacity_min(class="form-control", min=1) }}
-          {% for e in form.capacity_min.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="col-md-4 mb-3">
-          {{ form.capacity_max.label(class="form-label") }}
-          {{ form.capacity_max(class="form-control", min=1, id="capacity-max") }}
-          {% for e in form.capacity_max.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="col-md-4 mb-3">
-          {{ form.price.label(class="form-label") }}
-          {{ form.price(class="form-control", min=0, step="0.01", placeholder="0 = free") }}
-          {% for e in form.price.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-      </div>
-
-      <div class="mb-3">
-        {{ form.approval_mode.label(class="form-label") }}
-        {{ form.approval_mode(class="form-select") }}
-      </div>
-
-      <div class="mb-3 form-check">
-        {{ form.is_public(class="form-check-input") }}
-        {{ form.is_public.label(class="form-check-label") }}
-      </div>
-
-      <div class="mb-3 form-check">
-        {{ form.participant_list_visible(class="form-check-input") }}
-        {{ form.participant_list_visible.label(class="form-check-label") }}
-      </div>
-
-      <div class="d-flex gap-2">
-        {{ form.submit(class="btn btn-primary") }}
-        <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
-  </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -124,7 +138,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             document.getElementById('capacity-max').setCustomValidity('');
         }
-
         var eventTime = new Date(document.querySelector('[name="event_time"]').value);
         var now = new Date();
         if (eventTime && eventTime < now) {

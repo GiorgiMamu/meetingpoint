@@ -1,17 +1,34 @@
 {% extends "base.html" %}
 {% block title %}Privacy Policy — MeetingPoint{% endblock %}
 {% block content %}
-<h2>Privacy Policy</h2>
-<p><em>Last updated: 2026</em></p>
-<p>MeetingPoint collects the minimum personal information required to operate the service: your name, email address, and any profile information you choose to provide.</p>
-<h5>What we collect</h5>
-<p>Email address (for authentication and notifications), name, optional bio and interests, event activity (events created, joined, bookmarked).</p>
-<h5>How we use it</h5>
-<p>To provide and improve the platform, send event-related notifications and reminders you have opted into, and to power recommendations based on your activity.</p>
-<h5>What we don't do</h5>
-<p>We do not sell your data. We do not share your data with third parties except as required by law.</p>
-<h5>Your rights</h5>
-<p>You may request deletion of your account and associated data at any time by contacting us.</p>
-<h5>Cookies</h5>
-<p>We use a single session cookie to keep you logged in. No tracking or advertising cookies are used.</p>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card p-4 p-md-5">
+            <h2 class="mb-1">Privacy Policy</h2>
+            <p class="text-muted small mb-4">Last updated: 2026</p>
+
+            <h5 class="section-title">What we collect</h5>
+            <p>MeetingPoint collects only the minimum personal information required to operate the service: your name, email address, and any optional profile information you choose to provide (bio, location, interests, profile photo).</p>
+
+            <h5 class="section-title">How we use it</h5>
+            <p>We use your information to provide and improve the platform, send event-related notifications and reminders you have opted into, and to power personalized recommendations based on your activity such as events you join or bookmark.</p>
+
+            <h5 class="section-title">What we don't do</h5>
+            <p>We do not sell your data. We do not share your personal information with third parties except as required by applicable law. We do not serve advertisements.</p>
+
+            <h5 class="section-title">Your rights</h5>
+            <p>You may request deletion of your account and all associated data at any time by contacting us. You can control the visibility of your profile and event history at any time from your profile settings.</p>
+
+            <h5 class="section-title">Cookies</h5>
+            <p>We use a single session cookie to keep you logged in, and a cookie to remember your consent to this policy. No tracking, analytics, or advertising cookies are used.</p>
+
+            <h5 class="section-title">Data security</h5>
+            <p>All passwords are hashed using Bcrypt and never stored in plain text. Sessions are protected with secure, HTTP-only cookies. All forms are protected against CSRF attacks.</p>
+
+            <div class="mt-4">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">← Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

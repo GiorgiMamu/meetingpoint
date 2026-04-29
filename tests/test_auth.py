@@ -100,3 +100,17 @@ def test_admin_required_rejects_regular_user(client, app):
     # Admin panel doesn't exist yet but 403 decorator works
     response = client.get('/admin', follow_redirects=False)
     assert response.status_code in [404, 403]
+
+def test_generate_and_verify_token(app):
+    with app.app_context():
+        from app.utils import generate_token, verify_token
+        token = generate_token('test@example.com', salt='email-confirm')
+        result = verify_token(token, salt='email-confirm')
+        assert result == 'test@example.com'
+
+def test_expired_token_returns_none(app):
+    with app.app_context():
+        from app.utils import generate_token, verify_token
+        token = generate_token('test@example.com', salt='email-confirm')
+        result = verify_token(token, salt='email-confirm', max_age=-1)
+        assert result is None

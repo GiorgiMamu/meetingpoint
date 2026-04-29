@@ -8,3 +8,5 @@ logs/
 *.db
 .DS_Store
 .idea/
+tests/test.db
+instance/test.db

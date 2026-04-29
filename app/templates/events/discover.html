@@ -1,98 +1,114 @@
 {% extends "base.html" %}
 {% block title %}Discover — MeetingPoint{% endblock %}
 {% block content %}
-<h2 class="mb-4">Discover Events</h2>
 
-<form method="GET" action="{{ url_for('main.discover') }}" class="row g-2 mb-4">
-  <div class="col-md-4">
-    <input type="text" name="q" class="form-control" placeholder="Search events..."
-           value="{{ keyword }}">
-  </div>
-  <div class="col-md-3">
-    <select name="category" class="form-select">
-      <option value="">All categories</option>
-      {% for cat in categories %}
-        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
-          {{ cat|capitalize }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2">
-    <input type="date" name="date_from" class="form-control"
-           placeholder="From" value="{{ date_from }}">
-  </div>
-  <div class="col-md-2">
-    <input type="date" name="date_to" class="form-control"
-           placeholder="To" value="{{ date_to }}">
-  </div>
-  <div class="col-md-1">
-    <button type="submit" class="btn btn-primary w-100">Go</button>
-  </div>
-</form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Discover Events</h2>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.create_event') }}" class="btn btn-success">+ Create Event</a>
+    {% endif %}
+</div>
 
-{% if current_user.is_authenticated %}
-  <div class="mb-3">
-    <a href="{{ url_for('main.create_event') }}" class="btn btn-success">+ Create Event</a>
-  </div>
-{% endif %}
+<div class="search-bar">
+    <form method="GET" action="{{ url_for('main.discover') }}">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Search</label>
+                <input type="text" name="q" class="form-control"
+                       placeholder="Keywords..." value="{{ keyword }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
+                            {{ cat|capitalize }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">Go</button>
+            </div>
+        </div>
+    </form>
+</div>
 
 {% if events.items %}
-  <div class="row row-cols-1 row-cols-md-3 g-4">
-    {% for event in events.items %}
-    <div class="col">
-      <div class="card h-100">
-        {% if event.photo %}
-          <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-               class="card-img-top" style="height:180px; object-fit:cover;">
-        {% endif %}
-        <div class="card-body">
-          <h5 class="card-title">{{ event.title }}</h5>
-          <p class="card-text text-muted small">
-            {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
-          </p>
-          {% if event.location_text %}
-            <p class="card-text text-muted small">{{ event.location_text }}</p>
-          {% endif %}
-          <span class="badge bg-secondary">{{ event.category }}</span>
-          {% if event.price and event.price > 0 %}
-            <span class="badge bg-warning text-dark">{{ "%.2f"|format(event.price) }} GEL</span>
-          {% else %}
-            <span class="badge bg-success">Free</span>
-          {% endif %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for event in events.items %}
+        <div class="col">
+            <div class="card card-event h-100">
+                {% if event.photo %}
+                    <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+                         class="card-img-top">
+                {% else %}
+                    <div style="height:190px; background: linear-gradient(135deg, var(--forest-dark), var(--sky-dark));
+                                display:flex; align-items:center; justify-content:center;">
+                        <span style="font-size:3rem;">🗓️</span>
+                    </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ event.title }}</h5>
+                    <p class="text-muted small mb-1">
+                        📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
+                    </p>
+                    {% if event.location_text %}
+                        <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        <span class="badge bg-secondary">{{ event.category }}</span>
+                        {% if event.price and event.price > 0 %}
+                            <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} GEL</span>
+                        {% else %}
+                            <span class="badge bg-success">Free</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+                       class="btn btn-outline-primary btn-sm w-100">View Event</a>
+                </div>
+            </div>
         </div>
-        <div class="card-footer">
-          <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-             class="btn btn-outline-primary btn-sm w-100">View Event</a>
-        </div>
-      </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-  </div>
 
-  <!-- Pagination -->
-  <nav class="mt-4">
-    <ul class="pagination justify-content-center">
-      {% if events.has_prev %}
-        <li class="page-item">
-          <a class="page-link" href="{{ url_for('main.discover', page=events.prev_num,
-             q=keyword, category=selected_category,
-             date_from=date_from, date_to=date_to) }}">Previous</a>
-        </li>
-      {% endif %}
-      <li class="page-item disabled">
-        <span class="page-link">Page {{ events.page }} of {{ events.pages }}</span>
-      </li>
-      {% if events.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="{{ url_for('main.discover', page=events.next_num,
-             q=keyword, category=selected_category,
-             date_from=date_from, date_to=date_to) }}">Next</a>
-        </li>
-      {% endif %}
-    </ul>
-  </nav>
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if events.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.discover', page=events.prev_num,
+                       q=keyword, category=selected_category,
+                       date_from=date_from, date_to=date_to) }}">← Previous</a>
+                </li>
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ events.page }} of {{ events.pages }}</span>
+            </li>
+            {% if events.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.discover', page=events.next_num,
+                       q=keyword, category=selected_category,
+                       date_from=date_from, date_to=date_to) }}">Next →</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
 {% else %}
-  <div class="alert alert-info">No events found. Try adjusting your filters.</div>
+    <div class="empty-state">
+        <div style="font-size:3rem; margin-bottom:1rem;">🔍</div>
+        <h5>No events found</h5>
+        <p>Try adjusting your filters or <a href="{{ url_for('main.create_event') }}">create one yourself</a>.</p>
+    </div>
 {% endif %}
 {% endblock %}

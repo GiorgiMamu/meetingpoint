@@ -1,7 +1,8 @@
-"""Phase 2 event model confirmed
-Revision ID: f1fc711764d9
-Revises: b826aa4a5003
-Create Date: 2026-04-30 00:11:44.821450
+"""restore tables
+
+Revision ID: f630ce6734b3
+Revises: 5598c96562d9
+Create Date: 2026-04-30 01:42:51.802607
 
 """
 from alembic import op
@@ -9,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f1fc711764d9'
-down_revision = 'b826aa4a5003'
+revision = 'f630ce6734b3'
+down_revision = '5598c96562d9'
 branch_labels = None
 depends_on = None
 

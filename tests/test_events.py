@@ -3,6 +3,7 @@ from app import db, bcrypt
 from app.models import User, Event, Participation
 from datetime import datetime, timedelta
 import io
+from PIL import Image
 
 def create_user(app, email='host@example.com', password='password123', name='Host User'):
     with app.app_context():
@@ -217,3 +218,26 @@ def test_image_upload_rejected_non_image(client, app):
                            follow_redirects=True)
     with app.app_context():
         assert Event.query.count() == 0
+
+
+
+def create_test_image():
+    img = Image.new('RGB', (100, 100), color=(100, 150, 100))
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG')
+    buf.seek(0)
+    return buf
+
+def test_image_upload_valid(client, app):
+    create_user(app)
+    login(client)
+    data = create_event_data()
+    data['photo'] = (create_test_image(), 'test.jpg')
+    response = client.post('/events/create',
+                           data=data,
+                           content_type='multipart/form-data',
+                           follow_redirects=True)
+    with app.app_context():
+        event = Event.query.first()
+        assert event is not None
+        assert event.photo is not None

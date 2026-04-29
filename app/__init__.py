@@ -30,9 +30,9 @@ def create_app(config_name='default'):
     bcrypt.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
-    migrate.init_app(app, db)
+    if not app.config.get('TESTING'):
+        migrate.init_app(app, db)
     limiter.init_app(app)
-
     login_manager.login_view = 'main.login'
     login_manager.login_message_category = 'info'
 

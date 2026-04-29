@@ -1,20 +1,19 @@
 import pytest
-from app import create_app, db
+import os
+from app import create_app, db as _db
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def app():
-    app = create_app('development')
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['WTF_CSRF_ENABLED'] = False
-
-    app.config['MAIL_SUPPRESS_SEND'] = True
+    app = create_app('testing')
+    app.config['RATELIMIT_ENABLED'] = False
 
     with app.app_context():
-        db.create_all()
+        _db.create_all()
         yield app
-        db.drop_all()
+        _db.session.remove()
+        _db.drop_all()
+        _db.engine.dispose()
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def client(app):
     return app.test_client()
