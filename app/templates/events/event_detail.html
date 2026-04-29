@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — MeetingPoint{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    {% if event.photo %}
+      <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+           class="img-fluid rounded mb-4" style="max-height:400px; width:100%; object-fit:cover;">
+    {% endif %}
+
+    <h1>{{ event.title }}</h1>
+    <p class="text-muted">
+      <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
+      {% if event.location_text %} · {{ event.location_text }}{% endif %}
+    </p>
+
+    {% if event.category %}
+      <span class="badge bg-secondary">{{ event.category }}</span>
+    {% endif %}
+    {% if event.mood_tags %}
+      {% for tag in event.mood_tags.split(',') %}
+        <span class="badge bg-info text-dark">{{ tag.strip() }}</span>
+      {% endfor %}
+    {% endif %}
+
+    <div class="mt-3">
+      {% if event.price and event.price > 0 %}
+        <span class="badge bg-warning text-dark">{{ "%.2f"|format(event.price) }} GEL</span>
+      {% else %}
+        <span class="badge bg-success">Free</span>
+      {% endif %}
+      {% if event.capacity_max %}
+        <span class="text-muted ms-2">Max {{ event.capacity_max }} participants</span>
+      {% endif %}
+    </div>
+
+    <hr>
+    <p>{{ event.description or 'No description provided.' }}</p>
+
+    <p class="text-muted small">
+      Hosted by <a href="{{ url_for('main.profile', user_id=event.host.id) }}">{{ event.host.name }}</a>
+    </p>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        {% if current_user.is_authenticated %}
+          {% if current_user.id == event.host_id %}
+            <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
+               class="btn btn-outline-primary w-100 mb-2">Edit Event</a>
+            <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
+              {{ form.hidden_tag() if form else '' }}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-warning w-100 mb-2"
+                      onclick="return confirm('Cancel this event and notify participants?')">
+                Cancel Event
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-danger w-100"
+                      onclick="return confirm('Permanently delete this event?')">
+                Delete Event
+              </button>
+            </form>
+          {% elif user_participation %}
+            <div class="alert alert-info mb-0">
+              {% if user_participation.status == 'pending' %}
+                Your request is pending approval.
+              {% elif user_participation.status == 'approved' %}
+                You are attending this event.
+              {% elif user_participation.status == 'declined' %}
+                Your request was declined.
+              {% endif %}
+            </div>
+          {% else %}
+            <p class="text-muted small">Join to participate in this event.</p>
+          {% endif %}
+        {% else %}
+          <p class="text-muted">
+            <a href="{{ url_for('main.login') }}">Log in</a> to join this event.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if participants %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="card-title">Participants ({{ participants|length }})</h6>
+        {% for p in participants[:10] %}
+          <a href="{{ url_for('main.profile', user_id=p.user_id) }}"
+             class="d-block text-decoration-none text-dark small">{{ p.user.name }}</a>
+        {% endfor %}
+        {% if participants|length > 10 %}
+          <p class="text-muted small mt-1">+{{ participants|length - 10 }} more</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

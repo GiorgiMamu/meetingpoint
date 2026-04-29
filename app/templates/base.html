@@ -19,7 +19,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 {% if current_user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="#">Discover</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover') }}">Discover</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Chats</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Notifications</a></li>
                     <li class="nav-item dropdown">
@@ -27,9 +27,9 @@
                             {{ current_user.name }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#">Profile</a></li>
-                            <li><a class="dropdown-item" href="#">My Events</a></li>
-                            <li><a class="dropdown-item" href="#">History</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My Events</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
                             <li><a class="dropdown-item" href="#">Bookmarks</a></li>
                             <li><a class="dropdown-item" href="#">Settings</a></li>
                             {% if current_user.is_admin() %}
@@ -69,6 +69,7 @@
 </div>
 
 <!-- Cookie consent banner -->
+{% if not current_user.is_authenticated %}
 <div id="cookie-banner" class="fixed-bottom bg-dark text-white p-3 justify-content-between align-items-center"
      style="display:none;">
     <span>We use cookies to keep you logged in. By using MeetingPoint you agree to our
@@ -77,6 +78,7 @@
     </span>
     <button id="cookie-accept-btn" class="btn btn-warning btn-sm ms-3">Got it</button>
 </div>
+{% endif %}
 
 <footer class="mt-5 py-3 bg-light text-center text-muted">
     <small>
@@ -88,15 +90,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         var banner = document.getElementById('cookie-banner');
-        var btn = document.getElementById('cookie-accept-btn');
+        if (!banner) return;
 
-        if (!document.cookie.includes('cookie_consent=true')) {
+        var accepted = document.cookie.split(';').some(function(c) {
+            return c.trim().startsWith('cookie_consent=true');
+        });
+
+        if (!accepted) {
             banner.style.display = 'flex';
         }
 
-        btn.addEventListener('click', function() {
+        document.getElementById('cookie-accept-btn').addEventListener('click', function () {
             document.cookie = "cookie_consent=true;path=/;max-age=31536000";
             banner.style.display = 'none';
         });

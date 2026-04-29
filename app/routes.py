@@ -1,27 +1,44 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+"""
+routes.py — All HTTP route handlers for MeetingPoint.
+Organized into sections: general, auth, events, profiles, pages.
+"""
+
+from flask import (Blueprint, render_template, redirect, url_for,
+                   flash, request, abort, current_app)
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
-from app.models import User
-from app.forms import RegistrationForm, LoginForm, RequestPasswordResetForm, ResetPasswordForm
-from app.decorators import admin_required, host_required
-
-import logging
+from app.models import User, Event, Participation, Notification
+from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
+                       ResetPasswordForm, EventForm)
 from app.utils import (send_verification_email, send_password_reset_email,
-                       verify_token, generate_token, sanitize)
+                       verify_token, sanitize, save_event_photo,
+                       delete_event_photo, send_cancellation_emails)
+from app.decorators import admin_required, host_required
+from datetime import datetime
+import logging
 
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
 
+# ============================================================
+# GENERAL
+# ============================================================
+
 @main.route('/')
 def index():
+    """Home page."""
     return render_template('index.html')
 
 
-# --- REGISTRATION ---
+# ============================================================
+# AUTH
+# ============================================================
+
 @main.route('/register', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def register():
+    """Register a new user account. Sends email verification link."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
@@ -29,12 +46,8 @@ def register():
         name = sanitize(form.name.data)
         email = sanitize(form.email.data).lower()
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        user = User(
-            name=name,
-            email=email,
-            password_hash=hashed_pw,
-            is_active=False
-        )
+        user = User(name=name, email=email,
+                    password_hash=hashed_pw, is_active=False)
         db.session.add(user)
         db.session.commit()
         send_verification_email(user)
@@ -44,10 +57,10 @@ def register():
     return render_template('register.html', form=form)
 
 
-# --- EMAIL CONFIRMATION ---
 @main.route('/confirm/<token>')
 @limiter.limit("10 per minute")
 def confirm_email(token):
+    """Confirm a user's email address via token link."""
     email = verify_token(token, salt='email-confirm')
     if not email:
         flash('The confirmation link is invalid or has expired.', 'danger')
@@ -63,49 +76,52 @@ def confirm_email(token):
     return redirect(url_for('main.login'))
 
 
-# --- LOGIN ---
 @main.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def login():
+    """Log in an existing user."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=sanitize(form.email.data).lower()).first()
-        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
+        user = User.query.filter_by(
+            email=sanitize(form.email.data).lower()).first()
+        if user and bcrypt.check_password_hash(
+                user.password_hash, form.password.data):
             if not user.is_active:
                 flash('Please confirm your email before logging in.', 'warning')
                 return redirect(url_for('main.login'))
             login_user(user, remember=form.remember.data)
             logger.info(f'Login: {user.email}')
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('main.index'))
+            return redirect(next_page or url_for('main.index'))
         else:
             logger.warning(f'Failed login attempt for: {form.email.data}')
             flash('Invalid email or password.', 'danger')
     return render_template('login.html', form=form)
 
 
-# --- LOGOUT ---
 @main.route('/logout')
 @limiter.limit("10 per minute")
 @login_required
 def logout():
+    """Log out the current user."""
     logger.info(f'Logout: {current_user.email}')
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))
 
 
-# --- REQUEST PASSWORD RESET ---
 @main.route('/reset-password', methods=['GET', 'POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("5 per minute")
 def request_password_reset():
+    """Request a password reset email."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RequestPasswordResetForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=sanitize(form.email.data).lower()).first()
+        user = User.query.filter_by(
+            email=sanitize(form.email.data).lower()).first()
         if user:
             send_password_reset_email(user)
             logger.info(f'Password reset requested: {user.email}')
@@ -114,10 +130,10 @@ def request_password_reset():
     return render_template('request_reset.html', form=form)
 
 
-# --- RESET PASSWORD ---
 @main.route('/reset-password/<token>', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def reset_password(token):
+    """Reset a user's password via token link."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     email = verify_token(token, salt='password-reset')
@@ -136,34 +152,324 @@ def reset_password(token):
     return render_template('reset_password.html', form=form)
 
 
-# --- STATIC PAGES ---
+# ============================================================
+# EVENTS — CRUD
+# ============================================================
+
+@main.route('/events/create', methods=['GET', 'POST'])
+@login_required
+def create_event():
+    """Create a new event. Host only."""
+    form = EventForm()
+    if form.validate_on_submit():
+        photo_filename = None
+        if form.photo.data:
+            photo_filename = save_event_photo(form.photo.data)
+
+        event = Event(
+            host_id=current_user.id,
+            title=sanitize(form.title.data),
+            description=sanitize(form.description.data),
+            event_time=form.event_time.data,
+            location_text=sanitize(form.location_text.data),
+            lat=form.lat.data,
+            lng=form.lng.data,
+            category=form.category.data,
+            mood_tags=sanitize(form.mood_tags.data),
+            photo=photo_filename,
+            capacity_min=form.capacity_min.data,
+            capacity_max=form.capacity_max.data,
+            price=form.price.data or 0.0,
+            is_public=form.is_public.data,
+            approval_mode=form.approval_mode.data,
+            participant_list_visible=form.participant_list_visible.data
+        )
+        db.session.add(event)
+        db.session.commit()
+        logger.info(f'Event created: {event.id} by user {current_user.id}')
+        flash('Event created successfully!', 'success')
+        return redirect(url_for('main.event_detail', event_id=event.id))
+    return render_template('events/create_event.html', form=form, title='Create Event')
+
+
+@main.route('/events/<int:event_id>')
+def event_detail(event_id):
+    """View a single event's detail page."""
+    event = Event.query.get_or_404(event_id)
+    if not event.is_public and (
+            not current_user.is_authenticated or
+            current_user.id != event.host_id):
+        abort(403)
+
+    participants = []
+    if event.participant_list_visible or (
+            current_user.is_authenticated and
+            current_user.id == event.host_id):
+        participants = [p for p in event.participations
+                        if p.status == 'approved']
+
+    user_participation = None
+    if current_user.is_authenticated:
+        user_participation = Participation.query.filter_by(
+            user_id=current_user.id,
+            event_id=event_id
+        ).first()
+
+    return render_template('events/event_detail.html',
+                           event=event,
+                           participants=participants,
+                           user_participation=user_participation)
+
+
+@main.route('/events/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+@host_required
+def edit_event(event_id):
+    """Edit an existing event. Host only."""
+    event = Event.query.get_or_404(event_id)
+    form = EventForm(obj=event)
+    if form.validate_on_submit():
+        if form.photo.data and hasattr(form.photo.data, 'filename') and form.photo.data.filename:
+            delete_event_photo(event.photo)
+            event.photo = save_event_photo(form.photo.data)
+
+        event.title = sanitize(form.title.data)
+        event.description = sanitize(form.description.data)
+        event.event_time = form.event_time.data
+        event.location_text = sanitize(form.location_text.data)
+        event.lat = form.lat.data
+        event.lng = form.lng.data
+        event.category = form.category.data
+        event.mood_tags = sanitize(form.mood_tags.data)
+        event.capacity_min = form.capacity_min.data
+        event.capacity_max = form.capacity_max.data
+        event.price = form.price.data or 0.0
+        event.is_public = form.is_public.data
+        event.approval_mode = form.approval_mode.data
+        event.participant_list_visible = form.participant_list_visible.data
+
+        db.session.commit()
+        logger.info(f'Event edited: {event.id} by user {current_user.id}')
+        flash('Event updated successfully!', 'success')
+        return redirect(url_for('main.event_detail', event_id=event.id))
+    elif request.method == 'GET':
+        form.event_time.data = event.event_time
+    return render_template('events/create_event.html', form=form,
+                           title='Edit Event', event=event)
+
+
+@main.route('/events/<int:event_id>/delete', methods=['POST'])
+@login_required
+@host_required
+def delete_event(event_id):
+    """Delete an event and notify participants. Host only."""
+    event = Event.query.get_or_404(event_id)
+    participants = Participation.query.filter_by(event_id=event_id).all()
+    approved = [p for p in participants if p.status == 'approved']
+
+    send_cancellation_emails(event, approved)
+    delete_event_photo(event.photo)
+
+    Participation.query.filter_by(event_id=event_id).delete()
+    Notification.query.filter_by(related_event_id=event_id).delete()
+    db.session.delete(event)
+    db.session.commit()
+
+    logger.info(f'Event deleted: {event_id} by user {current_user.id}')
+    flash('Event deleted and participants notified.', 'info')
+    return redirect(url_for('main.my_events'))
+
+
+@main.route('/events/<int:event_id>/cancel', methods=['POST'])
+@login_required
+@host_required
+def cancel_event(event_id):
+    """Cancel an event (marks as not public) and notifies participants."""
+    event = Event.query.get_or_404(event_id)
+    participants = Participation.query.filter_by(event_id=event_id).all()
+    approved = [p for p in participants if p.status == 'approved']
+
+    send_cancellation_emails(event, approved)
+    event.is_public = False
+    db.session.commit()
+
+    logger.info(f'Event cancelled: {event_id} by user {current_user.id}')
+    flash('Event cancelled and participants notified.', 'info')
+    return redirect(url_for('main.my_events'))
+
+
+# ============================================================
+# EVENTS — DISCOVER, SEARCH, MY EVENTS
+# ============================================================
+
+@main.route('/discover')
+def discover():
+    """
+    Discover page — lists all public events with keyword,
+    category and date filters. Paginated.
+    """
+    page = request.args.get('page', 1, type=int)
+    keyword = sanitize(request.args.get('q', ''))
+    category = request.args.get('category', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    query = Event.query.filter_by(is_public=True)
+
+    if keyword:
+        query = query.filter(
+            db.or_(
+                Event.title.ilike(f'%{keyword}%'),
+                Event.description.ilike(f'%{keyword}%'),
+                Event.mood_tags.ilike(f'%{keyword}%')
+            )
+        )
+    if category:
+        query = query.filter_by(category=category)
+    if date_from:
+        try:
+            query = query.filter(
+                Event.event_time >= datetime.strptime(date_from, '%Y-%m-%d'))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            query = query.filter(
+                Event.event_time <= datetime.strptime(date_to, '%Y-%m-%d'))
+        except ValueError:
+            pass
+
+    query = query.order_by(Event.event_time.asc())
+    events = query.paginate(page=page, per_page=12, error_out=False)
+
+    categories = [
+        'social', 'sports', 'arts', 'music',
+        'food', 'outdoors', 'games', 'education', 'other'
+    ]
+    return render_template('events/discover.html',
+                           events=events,
+                           categories=categories,
+                           keyword=keyword,
+                           selected_category=category,
+                           date_from=date_from,
+                           date_to=date_to)
+
+
+@main.route('/my-events')
+@login_required
+def my_events():
+    """List all events hosted by the current user."""
+    events = Event.query.filter_by(
+        host_id=current_user.id
+    ).order_by(Event.event_time.desc()).all()
+    return render_template('events/my_events.html', events=events)
+
+
+@main.route('/history')
+@login_required
+def history():
+    """Show past and upcoming events the user has participated in."""
+    now = datetime.utcnow()
+    participations = Participation.query.filter_by(
+        user_id=current_user.id,
+        status='approved'
+    ).all()
+
+    upcoming = []
+    past = []
+    for p in participations:
+        if p.event.event_time >= now:
+            upcoming.append(p.event)
+        else:
+            past.append(p.event)
+
+    upcoming.sort(key=lambda e: e.event_time)
+    past.sort(key=lambda e: e.event_time, reverse=True)
+
+    return render_template('events/history.html',
+                           upcoming=upcoming, past=past)
+
+
+# ============================================================
+# PROFILES
+# ============================================================
+
+@main.route('/profile/<int:user_id>')
+def profile(user_id):
+    """View a user's public profile."""
+    user = User.query.get_or_404(user_id)
+    if not user.is_profile_public and (
+            not current_user.is_authenticated or
+            current_user.id != user_id):
+        abort(403)
+
+    hosted_events = Event.query.filter_by(
+        host_id=user_id, is_public=True
+    ).order_by(Event.event_time.desc()).limit(5).all()
+
+    history_events = []
+    if user.is_history_public or (
+            current_user.is_authenticated and
+            current_user.id == user_id):
+        participations = Participation.query.filter_by(
+            user_id=user_id, status='approved'
+        ).all()
+        history_events = [p.event for p in participations]
+
+    return render_template('profiles/profile.html',
+                           user=user,
+                           hosted_events=hosted_events,
+                           history_events=history_events)
+
+
+@main.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    """Edit the current user's profile."""
+    if request.method == 'POST':
+        current_user.name = sanitize(request.form.get('name', ''))
+        current_user.bio = sanitize(request.form.get('bio', ''))
+        current_user.location = sanitize(request.form.get('location', ''))
+        current_user.interests = sanitize(request.form.get('interests', ''))
+        current_user.is_profile_public = 'is_profile_public' in request.form
+        current_user.is_history_public = 'is_history_public' in request.form
+        db.session.commit()
+        flash('Profile updated.', 'success')
+        return redirect(url_for('main.profile', user_id=current_user.id))
+    return render_template('profiles/edit_profile.html', user=current_user)
+
+
+# ============================================================
+# STATIC PAGES
+# ============================================================
+
 @main.route('/privacy')
-@limiter.limit("10 per minute")
 def privacy():
+    """Privacy policy page."""
     return render_template('privacy.html')
 
 
 @main.route('/terms')
-@limiter.limit("10 per minute")
 def terms():
+    """Terms of service page."""
     return render_template('terms.html')
 
 
-# --- ERROR HANDLERS ---
+# ============================================================
+# ERROR HANDLERS
+# ============================================================
+
 @main.app_errorhandler(403)
-@limiter.limit("10 per minute")
 def forbidden(e):
     return render_template('errors/403.html'), 403
 
 
 @main.app_errorhandler(404)
-@limiter.limit("10 per minute")
 def not_found(e):
     return render_template('errors/404.html'), 404
 
 
 @main.app_errorhandler(500)
-@limiter.limit("10 per minute")
 def server_error(e):
     logger.error(f'Server error: {e}')
     return render_template('errors/500.html'), 500

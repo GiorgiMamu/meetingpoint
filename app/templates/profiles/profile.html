@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ user.name }} — MeetingPoint{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-4 text-center">
+    {% if user.profile_photo %}
+      <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
+           class="rounded-circle mb-3" style="width:120px; height:120px; object-fit:cover;">
+    {% else %}
+      <div class="rounded-circle bg-secondary d-inline-flex align-items-center
+                  justify-content-center mb-3 text-white"
+           style="width:120px; height:120px; font-size:2.5rem;">
+        {{ user.name[0].upper() }}
+      </div>
+    {% endif %}
+    <h3>{{ user.name }}</h3>
+    {% if user.location %}
+      <p class="text-muted">{{ user.location }}</p>
+    {% endif %}
+    {% if user.bio %}
+      <p>{{ user.bio }}</p>
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.id == user.id %}
+      <a href="{{ url_for('main.edit_profile') }}" class="btn btn-outline-primary btn-sm">
+        Edit Profile
+      </a>
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.id == user.id %}
+      <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary btn-sm mt-2">
+          View Full History
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="col-md-8">
+    <h5>Hosted Events</h5>
+    {% if hosted_events %}
+      <div class="list-group mb-4">
+        {% for event in hosted_events %}
+          <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+             class="list-group-item list-group-item-action">
+            <div class="d-flex justify-content-between">
+              <strong>{{ event.title }}</strong>
+              <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No hosted events.</p>
+    {% endif %}
+
+    {% if user.is_history_public or (current_user.is_authenticated and current_user.id == user.id) %}
+      <h5>Event History</h5>
+      {% if history_events %}
+        <div class="list-group">
+          {% for event in history_events[:5] %}
+            <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+               class="list-group-item list-group-item-action">
+              <div class="d-flex justify-content-between">
+                <strong>{{ event.title }}</strong>
+                <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted">No event history.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
