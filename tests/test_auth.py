@@ -39,6 +39,17 @@ def test_register_duplicate_email(client, app):
     assert b'already registered' in response.data
 
 
+def test_register_password_too_long_is_user_friendly(client):
+    response = client.post('/register', data={
+        'name': 'Alice',
+        'email': 'alice-longpw@example.com',
+        'password': 'a' * 73,  # 73 bytes in UTF-8
+        'confirm_password': 'a' * 73,
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Password is too long' in response.data
+
+
 # --- Login ---
 def test_login_page_loads(client):
     response = client.get('/login')
@@ -67,6 +78,26 @@ def test_login_inactive_user(client, app):
         'password': 'password123'
     }, follow_redirects=True)
     assert b'confirm your email' in response.data
+
+
+def test_login_password_too_long_is_user_friendly(client, app):
+    create_user(app)
+    response = client.post('/login', data={
+        'email': 'test@example.com',
+        'password': 'a' * 73,  # 73 bytes in UTF-8
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Invalid email or password' in response.data
+
+
+def test_login_password_too_long_utf8_multibyte(client, app):
+    create_user(app)
+    response = client.post('/login', data={
+        'email': 'test@example.com',
+        'password': 'é' * 37,  # 74 bytes in UTF-8 (2 bytes per char)
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Invalid email or password' in response.data
 
 
 # --- Logout ---

@@ -51,7 +51,7 @@ This link expires in 1 hour.
 
 If you did not register for MeetingPoint, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Confirm Your Email', body)
+    send_email(user.email, 'MeetingPoint — Confirm your email', body)
 
 
 def send_password_reset_email(user):
@@ -66,7 +66,7 @@ This link expires in 1 hour.
 
 If you did not request this, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Password Reset', body)
+    send_email(user.email, 'MeetingPoint — Reset your password', body)
 
 
 
@@ -114,7 +114,7 @@ We're sorry for the inconvenience.
 
 — MeetingPoint
 """
-        send_email(user.email, f'MeetingPoint — Event Cancelled: {event.title}', body)
+        send_email(user.email, f'MeetingPoint — Event cancelled: {event.title}', body)
 
 
 

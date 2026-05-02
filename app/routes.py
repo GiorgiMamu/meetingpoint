@@ -9,7 +9,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
 from app.models import User, Event, Participation, Notification
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
-                       ResetPasswordForm, EventForm)
+                       ResetPasswordForm, EventForm, BCRYPT_MAX_PASSWORD_BYTES,
+                       BCRYPT_MAX_PASSWORD_CHARS)
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails)
@@ -45,7 +46,17 @@ def register():
     if form.validate_on_submit():
         name = sanitize(form.name.data)
         email = sanitize(form.email.data).lower()
-        hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        try:
+            hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        except ValueError:
+            # should be blocked by form validator, but avoid 500s.
+            msg = (
+                f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters '
+                f'(you may need fewer if using emojis or special characters).'
+            )
+            form.password.errors.append(msg)
+            flash(msg, 'danger')
+            return render_template('register.html', form=form)
         user = User(name=name, email=email,
                     password_hash=hashed_pw, is_active=False)
         db.session.add(user)
@@ -86,8 +97,16 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(
             email=sanitize(form.email.data).lower()).first()
-        if user and bcrypt.check_password_hash(
-                user.password_hash, form.password.data):
+        try:
+            password_ok = bool(
+                user and bcrypt.check_password_hash(user.password_hash, form.password.data)
+            )
+        except ValueError:
+            logger.warning('Failed login attempt due to invalid password length.')
+            flash('Invalid email or password.', 'danger')
+            return render_template('login.html', form=form)
+
+        if password_ok:
             if not user.is_active:
                 flash('Please confirm your email before logging in.', 'warning')
                 return redirect(url_for('main.login'))
@@ -125,7 +144,7 @@ def request_password_reset():
         if user:
             send_password_reset_email(user)
             logger.info(f'Password reset requested: {user.email}')
-        flash('If that email exists, a reset link has been sent.', 'info')
+        flash('If the given email exists, you will receive a password reset link.', 'info')
         return redirect(url_for('main.login'))
     return render_template('request_reset.html', form=form)
 
@@ -143,8 +162,17 @@ def reset_password(token):
     form = ResetPasswordForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=sanitize(email)).first_or_404()
-        user.password_hash = bcrypt.generate_password_hash(
-            form.password.data).decode('utf-8')
+        try:
+            user.password_hash = bcrypt.generate_password_hash(
+                form.password.data).decode('utf-8')
+        except ValueError:
+            msg = (
+                f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters '
+                f'(you may need fewer if using emojis or special characters).'
+            )
+            form.password.errors.append(msg)
+            flash(msg, 'danger')
+            return render_template('reset_password.html', form=form)
         db.session.commit()
         logger.info(f'Password reset completed: {user.email}')
         flash('Password updated. You can now log in.', 'success')

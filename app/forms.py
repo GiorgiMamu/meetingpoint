@@ -7,6 +7,32 @@ from wtforms.validators import Optional, NumberRange
 from app.models import User
 import bleach
 
+# bcrypt only considers the first 72 bytes of the password. The underlying
+# `bcrypt` package raises ValueError for longer passwords to avoid silent
+# truncation, so we validate byte-length up-front.
+BCRYPT_MAX_PASSWORD_BYTES = 72
+# For UX we also cap passwords by characters; byte-length may still be lower
+# for passwords containing emojis or some non-ASCII characters.
+BCRYPT_MAX_PASSWORD_CHARS = 72
+
+def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
+
+    def _validator(form, field):
+        if not field.data:
+            return
+        try:
+            size = len(str(field.data).encode(encoding))
+        except Exception as exc:
+            raise ValidationError('Invalid password encoding.') from exc
+
+        if size > max_bytes:
+            raise ValidationError(
+                f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters '
+                f'(you may need fewer if using emojis or special characters).'
+            )
+
+    return _validator
+
 
 def _sanitize(value):
     if value is None:
@@ -33,18 +59,22 @@ class RegistrationForm(FlaskForm):
     ])
     password = PasswordField('Password', validators=[
         DataRequired(),
-        Length(min=8, max=128)
+        Length(min=8, message='Password must be at least 8 characters.'),
+        Length(max=BCRYPT_MAX_PASSWORD_CHARS,
+               message=f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters.'),
+        bcrypt_max_bytes()
     ])
-    confirm_password = PasswordField('Confirm Password', validators=[
+    confirm_password = PasswordField('Confirm password', validators=[
         DataRequired(),
-        EqualTo('password')
+        EqualTo('password'),
+        Length(max=BCRYPT_MAX_PASSWORD_CHARS)
     ])
     submit = SubmitField('Register')
 
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data.lower()).first()
         if user:
-            raise ValidationError('That email is already registered.')
+            raise ValidationError('This email is already registered.')
 
 
 class LoginForm(FlaskForm):
@@ -54,10 +84,9 @@ class LoginForm(FlaskForm):
         Length(max=150)
     ])
     password = PasswordField('Password', validators=[
-        DataRequired(),
-        Length(max=128)
+        DataRequired()
     ])
-    remember = BooleanField('Remember Me')
+    remember = BooleanField('Remember me')
     submit = SubmitField('Login')
 
 
@@ -67,28 +96,32 @@ class RequestPasswordResetForm(FlaskForm):
         Email(),
         Length(max=150)
     ])
-    submit = SubmitField('Request Password Reset')
+    submit = SubmitField('Send password reset link')
 
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data.lower()).first()
         if not user:
-            raise ValidationError('No account found with that email.')
+            raise ValidationError('No account found with the given email.')
 
 
 class ResetPasswordForm(FlaskForm):
-    password = PasswordField('New Password', validators=[
+    password = PasswordField('New password', validators=[
         DataRequired(),
-        Length(min=8, max=128)
+        Length(min=8, message='Password must be at least 8 characters.'),
+        Length(max=BCRYPT_MAX_PASSWORD_CHARS,
+               message=f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters.'),
+        bcrypt_max_bytes()
     ])
-    confirm_password = PasswordField('Confirm Password', validators=[
+    confirm_password = PasswordField('Confirm password', validators=[
         DataRequired(),
-        EqualTo('password')
+        EqualTo('password'),
+        Length(max=BCRYPT_MAX_PASSWORD_CHARS)
     ])
-    submit = SubmitField('Reset Password')
+    submit = SubmitField('Reset password')
 
 
 class EventForm(FlaskForm):
-    title = SanitizedStringField('Event Title', validators=[
+    title = SanitizedStringField('Event title', validators=[
         DataRequired(),
         Length(min=3, max=150)
     ])
@@ -116,18 +149,18 @@ class EventForm(FlaskForm):
         ('education', 'Education'),
         ('other', 'Other')
     ], validators=[DataRequired(message='Please select a category.')])
-    mood_tags = SanitizedStringField('Mood Tags (comma separated)', validators=[
+    mood_tags = SanitizedStringField('Mood tags (comma separated)', validators=[
         Optional(),
         Length(max=255)
     ])
     photo = FileField('Event Photo', validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only.')
     ])
-    capacity_min = IntegerField('Minimum Capacity', validators=[
+    capacity_min = IntegerField('Minimum capacity', validators=[
         Optional(),
         NumberRange(min=1, max=10000)
     ])
-    capacity_max = IntegerField('Maximum Capacity', validators=[
+    capacity_max = IntegerField('Maximum capacity', validators=[
         Optional(),
         NumberRange(min=1, max=10000)
     ])
@@ -135,8 +168,8 @@ class EventForm(FlaskForm):
         Optional(),
         NumberRange(min=0)
     ])
-    is_public = BooleanField('Public Event', default=True)
-    approval_mode = SelectField('Approval Mode', choices=[
+    is_public = BooleanField('Public event', default=True)
+    approval_mode = SelectField('Approval mode', choices=[
         ('automatic', 'Automatic — anyone can join instantly'),
         ('manual', 'Manual — you approve each participant')
     ])
