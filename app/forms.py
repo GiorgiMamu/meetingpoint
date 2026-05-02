@@ -15,6 +15,10 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 # for passwords containing emojis or some non-ASCII characters.
 BCRYPT_MAX_PASSWORD_CHARS = 72
 
+BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
+    f'Password is too long.'
+)
+
 def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
 
     def _validator(form, field):
@@ -26,10 +30,7 @@ def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str =
             raise ValidationError('Invalid password encoding.') from exc
 
         if size > max_bytes:
-            raise ValidationError(
-                f'Password is too long. Maximum is {BCRYPT_MAX_PASSWORD_CHARS} characters '
-                f'(you may need fewer if using emojis or special characters).'
-            )
+            raise ValidationError(BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
 
     return _validator
 
@@ -84,7 +85,10 @@ class LoginForm(FlaskForm):
         Length(max=150)
     ])
     password = PasswordField('Password', validators=[
-        DataRequired()
+        DataRequired(),
+        Length(max=BCRYPT_MAX_PASSWORD_CHARS,
+               message=BCRYPT_PASSWORD_TOO_LONG_MESSAGE),
+        bcrypt_max_bytes(),
     ])
     remember = BooleanField('Remember me')
     submit = SubmitField('Login')

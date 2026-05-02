@@ -87,7 +87,7 @@ def test_login_password_too_long_is_user_friendly(client, app):
         'password': 'a' * 73,  # 73 bytes in UTF-8
     }, follow_redirects=True)
     assert response.status_code == 200
-    assert b'Invalid email or password' in response.data
+    assert b'Password is too long' in response.data
 
 
 def test_login_password_too_long_utf8_multibyte(client, app):
@@ -97,7 +97,7 @@ def test_login_password_too_long_utf8_multibyte(client, app):
         'password': 'é' * 37,  # 74 bytes in UTF-8 (2 bytes per char)
     }, follow_redirects=True)
     assert response.status_code == 200
-    assert b'Invalid email or password' in response.data
+    assert b'Password is too long' in response.data
 
 
 # --- Logout ---
