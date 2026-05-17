@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Bookmarks — MeetingPoint{% endblock %}
 {% block content %}
+{% set category_labels = {
+    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
+    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
+    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
+    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
+} %}
 <h2 class="mb-4">My Bookmarks</h2>
 
 {% if bookmarks %}
@@ -26,9 +32,9 @@
                         <p class="text-muted small mb-2">📍 {{ bookmark.event.location_text }}</p>
                     {% endif %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ bookmark.event.category }}</span>
+                        <span class="badge bg-secondary">{{ category_labels.get(bookmark.event.category, bookmark.event.category) }}</span>
                         {% if bookmark.event.price and bookmark.event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(bookmark.event.price) }} GEL</span>
+                            <span class="badge bg-warning">{{ "%.2f"|format(bookmark.event.price) }} {{ bookmark.event.currency or 'GEL' }}</span>
                         {% else %}
                             <span class="badge bg-success">Free</span>
                         {% endif %}

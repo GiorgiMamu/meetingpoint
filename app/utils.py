@@ -58,7 +58,10 @@ If you did not register for MeetingPoint, ignore this email.
 
 
 def send_password_reset_email(user):
+    from app import db
     token = generate_token(user.email, salt='password-reset')
+    user.password_reset_token = token
+    db.session.commit()
     reset_url = url_for('main.reset_password', token=token, _external=True)
     body = f"""Hi {user.name},
 
@@ -69,7 +72,7 @@ This link expires in 1 hour.
 
 If you did not request this, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Reset your password', body)
+    send_email(user.email, 'MeetingPoint — Password Reset', body)
 
 
 

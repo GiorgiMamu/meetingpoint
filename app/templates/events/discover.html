@@ -2,6 +2,12 @@
 {% block title %}Discover — MeetingPoint{% endblock %}
 
 {% block content %}
+{% set category_labels = {
+    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
+    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
+    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
+    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
+} %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Discover Events</h2>
     {% if current_user.is_authenticated %}
@@ -23,9 +29,9 @@
                 <label class="form-label small fw-semibold mb-1">Category</label>
                 <select name="category" class="form-select">
                     <option value="">All categories</option>
-                    {% for cat in categories %}
-                        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
-                            {{ cat|capitalize }}
+                    {% for value, label in categories %}
+                        <option value="{{ value }}" {% if value == selected_category %}selected{% endif %}>
+                            {{ label }}
                         </option>
                     {% endfor %}
                 </select>
@@ -145,9 +151,9 @@
                         <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
                     {% endif %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ event.category }}</span>
+                        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
                         {% if event.price and event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} GEL</span>
+                                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
                         {% else %}
                             <span class="badge bg-success">Free</span>
                         {% endif %}

@@ -158,9 +158,19 @@ def reset_password(token):
     if not email:
         flash('The reset link is invalid or has expired.', 'danger')
         return redirect(url_for('main.request_password_reset'))
+    user = User.query.filter_by(email=sanitize(email)).first_or_404()
+
+    # Check token has not already been used
+    if user.password_reset_token != token:
+        flash('This reset link has already been used or is invalid.', 'danger')
+        return redirect(url_for('main.request_password_reset'))
+
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=sanitize(email)).first_or_404()
+        # Check new password is not same as current
+        if bcrypt.check_password_hash(user.password_hash, form.password.data):
+            flash('New password cannot be the same as your current password.', 'danger')
+            return render_template('reset_password.html', form=form)
         try:
             user.password_hash = bcrypt.generate_password_hash(
                 form.password.data).decode('utf-8')
@@ -170,6 +180,7 @@ def reset_password(token):
             form.password.errors.append(msg)
             flash(msg, 'danger')
             return render_template('reset_password.html', form=form)
+        user.password_reset_token = None  # invalidate token after use
         db.session.commit()
         logger.info(f'Password reset completed: {user.email}')
         flash('Password updated. You can now log in.', 'success')
@@ -215,6 +226,7 @@ def create_event():
             capacity_min=form.capacity_min.data,
             capacity_max=form.capacity_max.data,
             price=form.price.data or 0.0,
+            currency=form.currency.data,
             is_public=form.is_public.data,
             approval_mode=form.approval_mode.data,
             participant_list_visible=form.participant_list_visible.data
@@ -290,6 +302,7 @@ def edit_event(event_id):
         event.capacity_min = form.capacity_min.data
         event.capacity_max = form.capacity_max.data
         event.price = form.price.data or 0.0
+        event.currency = form.currency.data
         event.is_public = form.is_public.data
         event.approval_mode = form.approval_mode.data
         event.participant_list_visible = form.participant_list_visible.data
@@ -388,7 +401,8 @@ def discover():
             db.or_(
                 Event.title.ilike(f'%{keyword}%'),
                 Event.description.ilike(f'%{keyword}%'),
-                Event.mood_tags.ilike(f'%{keyword}%')
+                Event.mood_tags.ilike(f'%{keyword}%'),
+                Event.location_text.ilike(f'%{keyword}%')
             )
         )
     if category:
@@ -450,8 +464,18 @@ def discover():
     total_pages = math.ceil(total / per_page) if total > 0 else 1
 
     categories = [
-        'social', 'sports', 'arts', 'music',
-        'food', 'outdoors', 'games', 'education', 'other'
+        ('social', 'Social'),
+        ('sports', 'Sports'),
+        ('arts and culture', 'Arts & Culture'),
+        ('music', 'Music'),
+        ('food and drinks', 'Food & Drinks'),
+        ('outdoors', 'Outdoors'),
+        ('games', 'Games'),
+        ('education', 'Education'),
+        ('technology', 'Technology'),
+        ('wellness and health', 'Wellness & Health'),
+        ('travel', 'Travel'),
+        ('other', 'Other')
     ]
 
     return render_template('events/discover.html',

@@ -96,10 +96,16 @@
                         {{ form.capacity_max(class="form-control", min=1, id="capacity-max", placeholder="e.g. 20") }}
                         {% for e in form.capacity_max.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
                     </div>
+                </div>
+                <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         {{ form.price.label(class="form-label") }}
                         {{ form.price(class="form-control", min=0, step="0.01", placeholder="0 = free") }}
                         {% for e in form.price.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.currency.label(class="form-label") }}
+                        {{ form.currency(class="form-select") }}
                     </div>
                 </div>
 

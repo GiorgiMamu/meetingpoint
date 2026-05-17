@@ -1,43 +1,50 @@
 {% extends "base.html" %}
 {% block title %}{{ event.title }} — MeetingPoint{% endblock %}
 {% block content %}
+{% set category_labels = {
+    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
+    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
+    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
+    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
+} %}
+
+<!-- Title, meta, badges — full width above the two columns -->
+<h1 class="mb-1">{{ event.title }}</h1>
+<p class="event-meta">
+    📅 <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
+    {% if event.location_text %} &nbsp;·&nbsp; 📍 {{ event.location_text }}{% endif %}
+</p>
+<div class="d-flex flex-wrap gap-1 mb-3">
+    {% if event.category %}
+        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
+    {% endif %}
+    {% if event.mood_tags %}
+        {% for tag in event.mood_tags.split(',') %}
+            <span class="badge bg-info">{{ tag.strip() }}</span>
+        {% endfor %}
+    {% endif %}
+    {% if event.price and event.price > 0 %}
+        <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
+    {% else %}
+        <span class="badge bg-success">Free</span>
+    {% endif %}
+</div>
+
+<!-- Two-column layout starting from the image -->
 <div class="row g-4">
+
+    <!-- LEFT COLUMN -->
     <div class="col-lg-8">
         {% if event.photo %}
             <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
                  class="event-header-img">
         {% endif %}
-
-        <h1 class="mb-1">{{ event.title }}</h1>
-        <p class="event-meta">
-            📅 <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
-            {% if event.location_text %} &nbsp;·&nbsp; 📍 {{ event.location_text }}{% endif %}
-        </p>
-
-        <div class="d-flex flex-wrap gap-1 mb-3">
-            {% if event.category %}
-                <span class="badge bg-secondary">{{ event.category }}</span>
-            {% endif %}
-            {% if event.mood_tags %}
-                {% for tag in event.mood_tags.split(',') %}
-                    <span class="badge bg-info">{{ tag.strip() }}</span>
-                {% endfor %}
-            {% endif %}
-            {% if event.price and event.price > 0 %}
-                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} GEL</span>
-            {% else %}
-                <span class="badge bg-success">Free</span>
-            {% endif %}
-            {% if event.capacity_max %}
-                <span class="badge" style="background:var(--charcoal-light)">
-                    Max {{ event.capacity_max }} people
-                </span>
-            {% endif %}
-        </div>
-
         <hr>
-        <p style="white-space: pre-wrap; line-height: 1.7;">{{ event.description or 'No description provided.' }}</p>
-
+        <div style="background: rgba(255,255,255,0.45); border-left: 3px solid var(--forest-dark, #2d6a4f); border-radius: 6px; padding: 14px 18px; margin-bottom: 1rem;">
+            <p style=" line-height: 1.8; font-size: 1.05rem; color: #2e2e2e; margin: 0;">
+                {{ event.description or 'No description provided.' }}
+            </p>
+        </div>
         <p class="text-muted small mt-3">
             Hosted by
             <a href="{{ url_for('main.profile', user_id=event.host.id) }}" class="fw-semibold">
@@ -46,7 +53,10 @@
         </p>
     </div>
 
+    <!-- RIGHT COLUMN -->
     <div class="col-lg-4 event-sidebar">
+
+        <!-- Participation card -->
         <div class="card">
             <div class="card-body">
                 <h6 class="section-title">Participation</h6>
@@ -54,23 +64,25 @@
                     {% if current_user.id == event.host_id %}
                         <p class="text-muted small mb-3">You are the host of this event.</p>
                         <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
-                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit event</a>
+                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit Event</a>
                         {% if not event.is_cancelled %}
-                        <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-outline-warning w-100 mb-2"
-                                    onclick="return confirm('Cancel this event and notify all participants?')">
-                                ⚠️ Cancel Event
-                            </button>
-                        </form>
+                            <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-warning w-100 mb-2"
+                                        onclick="return confirm('Cancel this event and notify all participants?')">
+                                    ⚠️ Cancel Event
+                                </button>
+                            </form>
                         {% else %}
-                        <div class="alert alert-danger mb-2">This event has been cancelled.</div>
+                            <div class="alert alert-danger py-2 mb-2 text-center small fw-semibold">
+                                🚫 This event has been cancelled
+                            </div>
                         {% endif %}
                         <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-danger w-100"
-                                    onclick="return confirm('Permanently delete this event? Participants will be notified and this cannot be undone.')">
-                                🗑️ Delete event
+                                    onclick="return confirm('Permanently delete this event? This cannot be undone.')">
+                                🗑️ Delete Event
                             </button>
                         </form>
                     {% elif user_participation %}
@@ -88,13 +100,64 @@
                         </button>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted small">
+                    <p class="text-muted small mb-0">
                         <a href="{{ url_for('main.login') }}">Log in</a> to join this event.
                     </p>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Capacity card — compact inline layout -->
+        {% if event.capacity_max %}
+        {% set approved_count = event.participations | selectattr('status', 'equalto', 'approved') | list | length %}
+        {% set fill_percent = ((approved_count / event.capacity_max) * 100) | int %}
+        <div class="card mt-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <h6 class="section-title mb-0">Capacity</h6>
+                    <span style="font-size:1rem; font-weight:700; color:var(--forest-dark);">
+                        {{ approved_count }} / {{ event.capacity_max }}
+                    </span>
+                </div>
+                <div class="progress mb-1" style="height:6px; border-radius:6px; background:#e9ecef;">
+                    <div class="progress-bar" role="progressbar"
+                         style="width:{{ fill_percent }}%; border-radius:6px;
+                                background-color: {% if fill_percent >= 90 %}var(--rose-dark){% elif fill_percent >= 60 %}var(--sand-dark){% else %}var(--forest-light){% endif %};">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">{{ fill_percent }}% full</small>
+                    {% if event.capacity_min %}
+                        <small class="text-muted">Min {{ event.capacity_min }} to run</small>
+                    {% endif %}
+                </div>
+                {% if approved_count >= event.capacity_max %}
+                    <div class="alert alert-danger mt-2 mb-0 py-1 text-center small fw-semibold">
+                        Event is full
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Bookmark card -->
+        {% if current_user.is_authenticated and current_user.id != event.host_id %}
+        <div class="card mt-3">
+            <div class="card-body">
+                {% set is_bookmarked = current_user.bookmarks | selectattr('event_id', 'equalto', event.id) | list | length > 0 %}
+                <form method="POST" action="{{ url_for('main.toggle_bookmark', event_id=event.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if is_bookmarked %}
+                        <button type="submit" class="btn btn-outline-warning w-100">🔖 Remove Bookmark</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-secondary w-100">🔖 Bookmark Event</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Participants list card -->
         {% if participants %}
         <div class="card mt-3">
             <div class="card-body">
@@ -111,26 +174,12 @@
                     </a>
                 {% endfor %}
                 {% if participants|length > 8 %}
-                    <p class="text-muted small mt-1">+{{ participants|length - 8 }} more</p>
+                    <p class="text-muted small mt-1 mb-0">+{{ participants|length - 8 }} more</p>
                 {% endif %}
             </div>
         </div>
         {% endif %}
+
     </div>
-    {% if current_user.is_authenticated and current_user.id != event.host_id %}
-    <div class="card mt-3">
-        <div class="card-body">
-            {% set is_bookmarked = current_user.bookmarks | selectattr('event_id', 'equalto', event.id) | list | length > 0 %}
-            <form method="POST" action="{{ url_for('main.toggle_bookmark', event_id=event.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                {% if is_bookmarked %}
-                    <button type="submit" class="btn btn-outline-warning w-100">🔖 Remove Bookmark</button>
-                {% else %}
-                    <button type="submit" class="btn btn-outline-secondary w-100">🔖 Bookmark Event</button>
-                {% endif %}
-            </form>
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

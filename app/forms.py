@@ -145,12 +145,15 @@ class EventForm(FlaskForm):
         ('', 'Select a category'),
         ('social', 'Social'),
         ('sports', 'Sports'),
-        ('arts', 'Arts & Culture'),
+        ('arts and culture', 'Arts & Culture'),
         ('music', 'Music'),
-        ('food', 'Food & Drinks'),
+        ('food and drinks', 'Food & Drinks'),
         ('outdoors', 'Outdoors'),
         ('games', 'Games'),
         ('education', 'Education'),
+        ('technology', 'Technology'),
+        ('wellness and health', 'Wellness & Health'),
+        ('travel', 'Travel'),
         ('other', 'Other')
     ], validators=[DataRequired(message='Please select a category.')])
     mood_tags = SanitizedStringField('Mood tags (comma separated)', validators=[
@@ -171,6 +174,14 @@ class EventForm(FlaskForm):
     price = FloatField('Price (0 = free)', validators=[
         Optional(),
         NumberRange(min=0)
+    ])
+    currency = SelectField('Currency', choices=[
+        ('GEL', 'GEL — Georgian Lari'),
+        ('USD', 'USD — US Dollar'),
+        ('EUR', 'EUR — Euro'),
+        ('GBP', 'GBP — British Pound'),
+        ('TRY', 'TRY — Turkish Lira'),
+        ('RUB', 'RUB — Russian Ruble'),
     ])
     is_public = BooleanField('Public event', default=True)
     approval_mode = SelectField('Approval mode', choices=[
