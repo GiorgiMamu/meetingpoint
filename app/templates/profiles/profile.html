@@ -28,9 +28,9 @@
 
             {% if current_user.is_authenticated and current_user.id == user.id %}
                 <a href="{{ url_for('main.edit_profile') }}"
-                   class="btn btn-outline-primary btn-sm mt-3">✏️ Edit Profile</a>
+                   class="btn btn-outline-primary btn-sm mt-3">✏️ Edit profile</a>
                 <a href="{{ url_for('main.history') }}"
-                   class="btn btn-outline-secondary btn-sm mt-2">📋 View Full History</a>
+                   class="btn btn-outline-secondary btn-sm mt-2">📋 View full history</a>
             {% endif %}
         </div>
     </div>

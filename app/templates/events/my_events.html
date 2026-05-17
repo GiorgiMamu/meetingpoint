@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">My Events</h2>
-    <a href="{{ url_for('main.create_event') }}" class="btn btn-success">+ Create Event</a>
+    <a href="{{ url_for('main.create_event') }}" class="btn btn-success">➕ Create an event</a>
 </div>
 
 {% if events %}
@@ -62,7 +62,7 @@
     <div class="empty-state">
         <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
         <h5>No events yet</h5>
-        <p>You haven't created any events. <a href="{{ url_for('main.create_event') }}">Create your first one.</a></p>
+        <p>You haven't created any events yet.</p>
     </div>
 {% endif %}
 {% endblock %}

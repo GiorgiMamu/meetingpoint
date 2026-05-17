@@ -212,7 +212,7 @@ def create_event():
         logger.info(f'Event created: {event.id} by user {current_user.id}')
         flash('Event created successfully!', 'success')
         return redirect(url_for('main.event_detail', event_id=event.id))
-    return render_template('events/create_event.html', form=form, title='Create Event')
+    return render_template('events/create_event.html', form=form, title='Create an event')
 
 
 @main.route('/events/<int:event_id>')
@@ -278,7 +278,7 @@ def edit_event(event_id):
     elif request.method == 'GET':
         form.event_time.data = event.event_time
     return render_template('events/create_event.html', form=form,
-                           title='Edit Event', event=event)
+                           title='Edit event', event=event)
 
 
 @main.route('/events/<int:event_id>/delete', methods=['POST'])

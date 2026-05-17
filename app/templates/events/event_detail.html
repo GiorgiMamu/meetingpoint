@@ -54,19 +54,19 @@
                     {% if current_user.id == event.host_id %}
                         <p class="text-muted small mb-3">You are the host of this event.</p>
                         <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
-                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit Event</a>
+                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit event</a>
                         <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-warning w-100 mb-2"
                                     onclick="return confirm('Cancel this event and notify all participants?')">
-                                ⚠️ Cancel Event
+                                ⚠️ Cancel event
                             </button>
                         </form>
                         <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-danger w-100"
-                                    onclick="return confirm('Permanently delete this event? This cannot be undone.')">
-                                🗑️ Delete Event
+                                    onclick="return confirm('Permanently delete this event? Participants will be notified and this cannot be undone.')">
+                                🗑️ Delete event
                             </button>
                         </form>
                     {% elif user_participation %}

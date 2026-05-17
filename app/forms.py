@@ -91,7 +91,7 @@ class LoginForm(FlaskForm):
         bcrypt_max_bytes(),
     ])
     remember = BooleanField('Remember me')
-    submit = SubmitField('Login')
+    submit = SubmitField('Log In')
 
 
 class RequestPasswordResetForm(FlaskForm):
