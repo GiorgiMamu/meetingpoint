@@ -484,3 +484,8 @@ footer small { color: var(--moss-light); }
   .hero { padding: 2.5rem 1rem; }
   .auth-card { padding: 1.5rem 1rem; }
 }
+
+.list-group-item-action:hover {
+    background-color: var(--sand-dark) !important;
+    color: var(--charcoal-dark) !important;
+}

@@ -262,6 +262,9 @@ def event_detail(event_id):
 def edit_event(event_id):
     """Edit an existing event. Host only."""
     event = Event.query.get_or_404(event_id)
+    if event.is_cancelled:
+        flash('Cancelled events cannot be edited.', 'danger')
+        return redirect(url_for('main.my_events'))
     form = EventForm(obj=event)
     if form.validate_on_submit():
         lat = form.lat.data
@@ -327,12 +330,13 @@ def delete_event(event_id):
 @login_required
 @host_required
 def cancel_event(event_id):
-    """Cancel an event (marks as not public) and notifies participants."""
+    """Cancel an event and notify participants."""
     event = Event.query.get_or_404(event_id)
     participants = Participation.query.filter_by(event_id=event_id).all()
     approved = [p for p in participants if p.status == 'approved']
 
     send_cancellation_emails(event, approved)
+    event.is_cancelled = True
     event.is_public = False
     db.session.commit()
 
@@ -474,8 +478,6 @@ def discover():
                            center_lng=center_lng)
 
 
-
-
 # ============================================================
 # BOOKMARKS
 # ============================================================
@@ -587,7 +589,11 @@ def profile(user_id):
 def edit_profile():
     """Edit the current user's profile."""
     if request.method == 'POST':
-        current_user.name = sanitize(request.form.get('name', ''))
+        name = sanitize(request.form.get('name', '')).strip()
+        if not name:
+            flash('Name cannot be empty.', 'danger')
+            return render_template('profiles/edit_profile.html', user=current_user)
+        current_user.name = name
         current_user.bio = sanitize(request.form.get('bio', ''))
         current_user.location = sanitize(request.form.get('location', ''))
         current_user.interests = sanitize(request.form.get('interests', ''))

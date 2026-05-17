@@ -31,10 +31,12 @@
                         <td class="text-muted small">{{ event.event_time.strftime('%b %d, %Y') }}</td>
                         <td><span class="badge bg-secondary">{{ event.category }}</span></td>
                         <td>
-                            {% if event.is_public %}
+                            {% if event.is_cancelled %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% elif event.is_public %}
                                 <span class="badge bg-success">Public</span>
                             {% else %}
-                                <span class="badge bg-warning">Private/Cancelled</span>
+                                <span class="badge bg-warning">Private</span>
                             {% endif %}
                         </td>
                         <td>

@@ -54,10 +54,12 @@
                     <div class="col-md-6">
                         {{ form.lat.label(class="form-label") }}
                         {{ form.lat(class="form-control", id="lat-field", placeholder="e.g. 41.6938") }}
+                        {% for e in form.lat.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6">
                         {{ form.lng.label(class="form-label") }}
                         {{ form.lng(class="form-control", id="lng-field", placeholder="e.g. 44.8015") }}
+                        {% for e in form.lng.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
                     </div>
                 </div>
                 <div class="mb-3">

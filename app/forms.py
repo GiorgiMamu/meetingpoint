@@ -3,7 +3,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Regexp
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField, BooleanField
-from wtforms.validators import Optional, NumberRange
+from wtforms.validators import Optional, NumberRange, ValidationError as WTFValidationError
 from app.models import User
 import bleach
 
@@ -184,3 +184,13 @@ class EventForm(FlaskForm):
         if field.data and self.capacity_min.data:
             if field.data < self.capacity_min.data:
                 raise ValidationError('Maximum capacity must be greater than minimum.')
+
+    def validate_lat(self, field):
+        if field.data is not None:
+            if field.data < -90 or field.data > 90:
+                raise ValidationError('Latitude must be between -90 and 90.')
+
+    def validate_lng(self, field):
+        if field.data is not None:
+            if field.data < -180 or field.data > 180:
+                raise ValidationError('Longitude must be between -180 and 180.')

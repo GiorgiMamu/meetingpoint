@@ -70,6 +70,8 @@ class Event(db.Model):
     capacity_max = db.Column(db.Integer)
     price = db.Column(db.Float, default=0.0)
     is_public = db.Column(db.Boolean, default=True)
+    is_cancelled = db.Column(db.Boolean, default=False)
+
     approval_mode = db.Column(db.String(20), default='automatic')
     participant_list_visible = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
