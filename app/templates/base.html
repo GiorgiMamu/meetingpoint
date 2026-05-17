@@ -38,7 +38,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My events</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
-                            <li><a class="dropdown-item" href="#">Bookmarks</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.bookmarks') }}">Bookmarks</a></li>
                             <li><a class="dropdown-item" href="#">Settings</a></li>
                             {% if current_user.is_admin() %}
                             <li><hr class="dropdown-divider"></li>

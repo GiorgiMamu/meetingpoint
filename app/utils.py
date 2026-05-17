@@ -7,6 +7,9 @@ import os
 import uuid
 from PIL import Image
 from flask import current_app
+import math
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 def sanitize(value):
     if value is None:
@@ -117,6 +120,52 @@ We're sorry for the inconvenience.
         send_email(user.email, f'MeetingPoint — Event cancelled: {event.title}', body)
 
 
+
+def geocode_location(location_text):
+    """
+    Convert a location text string to (lat, lng) tuple.
+    Returns (None, None) if geocoding fails.
+    """
+    if not location_text or not location_text.strip():
+        return None, None
+    try:
+        geolocator = Nominatim(user_agent='meetingpoint_app')
+        location = geolocator.geocode(location_text, timeout=5)
+        if location:
+            return location.latitude, location.longitude
+        return None, None
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        import logging
+        logging.getLogger(__name__).warning(f'Geocoding failed for "{location_text}": {e}')
+        return None, None
+
+
+def haversine_distance(lat1, lng1, lat2, lng2):
+    """
+    Calculate distance in kilometers between two lat/lng points
+    using the Haversine formula.
+    """
+    R = 6371  # Earth radius in km
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def filter_events_by_radius(events, center_lat, center_lng, radius_km):
+    """
+    Filter a list of Event objects to those within radius_km
+    of the given center coordinates. Events without lat/lng are excluded.
+    """
+    result = []
+    for event in events:
+        if event.lat is not None and event.lng is not None:
+            dist = haversine_distance(center_lat, center_lng, event.lat, event.lng)
+            if dist <= radius_km:
+                result.append(event)
+    return result
 
 
 

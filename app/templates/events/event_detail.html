@@ -113,5 +113,20 @@
         </div>
         {% endif %}
     </div>
+    {% if current_user.is_authenticated and current_user.id != event.host_id %}
+    <div class="card mt-3">
+        <div class="card-body">
+            {% set is_bookmarked = current_user.bookmarks | selectattr('event_id', 'equalto', event.id) | list | length > 0 %}
+            <form method="POST" action="{{ url_for('main.toggle_bookmark', event_id=event.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if is_bookmarked %}
+                    <button type="submit" class="btn btn-outline-warning w-100">🔖 Remove Bookmark</button>
+                {% else %}
+                    <button type="submit" class="btn btn-outline-secondary w-100">🔖 Bookmark Event</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
