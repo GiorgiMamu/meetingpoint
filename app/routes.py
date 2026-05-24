@@ -2,18 +2,20 @@
 routes.py — All HTTP route handlers for MeetingPoint.
 Organized into sections: general, auth, events, profiles, pages.
 """
+import math
 
 from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort, current_app)
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
-from app.models import User, Event, Participation, Notification
+from app.models import User, Event, Participation, Notification, Bookmark
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
                        ResetPasswordForm, EventForm, BCRYPT_MAX_PASSWORD_BYTES,
                        BCRYPT_MAX_PASSWORD_CHARS, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
-                       delete_event_photo, send_cancellation_emails)
+                       delete_event_photo, send_cancellation_emails,
+                       geocode_location, filter_events_by_radius)
 from app.decorators import admin_required, host_required
 from datetime import datetime
 import logging
@@ -156,9 +158,19 @@ def reset_password(token):
     if not email:
         flash('The reset link is invalid or has expired.', 'danger')
         return redirect(url_for('main.request_password_reset'))
+    user = User.query.filter_by(email=sanitize(email)).first_or_404()
+
+    # Check token has not already been used
+    if user.password_reset_token != token:
+        flash('This reset link has already been used or is invalid.', 'danger')
+        return redirect(url_for('main.request_password_reset'))
+
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=sanitize(email)).first_or_404()
+        # Check new password is not same as current
+        if bcrypt.check_password_hash(user.password_hash, form.password.data):
+            flash('New password cannot be the same as your current password.', 'danger')
+            return render_template('reset_password.html', form=form)
         try:
             user.password_hash = bcrypt.generate_password_hash(
                 form.password.data).decode('utf-8')
@@ -168,6 +180,7 @@ def reset_password(token):
             form.password.errors.append(msg)
             flash(msg, 'danger')
             return render_template('reset_password.html', form=form)
+        user.password_reset_token = None  # invalidate token after use
         db.session.commit()
         logger.info(f'Password reset completed: {user.email}')
         flash('Password updated. You can now log in.', 'success')
@@ -185,6 +198,16 @@ def create_event():
     """Create a new event. Host only."""
     form = EventForm()
     if form.validate_on_submit():
+        # Auto-geocode if lat/lng not manually provided
+        lat = form.lat.data
+        lng = form.lng.data
+        if not lat or not lng:
+            if form.location_text.data:
+                lat, lng = geocode_location(form.location_text.data)
+                if lat and lng:
+                    logger.info(f'Geocoded "{form.location_text.data}" -> ({lat}, {lng})')
+                else:
+                    logger.warning(f'Geocoding fallback: no coords for "{form.location_text.data}"')
         photo_filename = None
         if form.photo.data:
             photo_filename = save_event_photo(form.photo.data)
@@ -195,14 +218,15 @@ def create_event():
             description=sanitize(form.description.data),
             event_time=form.event_time.data,
             location_text=sanitize(form.location_text.data),
-            lat=form.lat.data,
-            lng=form.lng.data,
+            lat=lat,
+            lng=lng,
             category=form.category.data,
             mood_tags=sanitize(form.mood_tags.data),
             photo=photo_filename,
             capacity_min=form.capacity_min.data,
             capacity_max=form.capacity_max.data,
             price=form.price.data or 0.0,
+            currency=form.currency.data,
             is_public=form.is_public.data,
             approval_mode=form.approval_mode.data,
             participant_list_visible=form.participant_list_visible.data
@@ -250,8 +274,19 @@ def event_detail(event_id):
 def edit_event(event_id):
     """Edit an existing event. Host only."""
     event = Event.query.get_or_404(event_id)
+    if event.is_cancelled:
+        flash('Cancelled events cannot be edited.', 'danger')
+        return redirect(url_for('main.my_events'))
     form = EventForm(obj=event)
     if form.validate_on_submit():
+        lat = form.lat.data
+        lng = form.lng.data
+        if not lat or not lng:
+            if form.location_text.data:
+                lat, lng = geocode_location(form.location_text.data)
+
+        event.lat = lat
+        event.lng = lng
         if form.photo.data and hasattr(form.photo.data, 'filename') and form.photo.data.filename:
             delete_event_photo(event.photo)
             event.photo = save_event_photo(form.photo.data)
@@ -267,6 +302,7 @@ def edit_event(event_id):
         event.capacity_min = form.capacity_min.data
         event.capacity_max = form.capacity_max.data
         event.price = form.price.data or 0.0
+        event.currency = form.currency.data
         event.is_public = form.is_public.data
         event.approval_mode = form.approval_mode.data
         event.participant_list_visible = form.participant_list_visible.data
@@ -307,12 +343,13 @@ def delete_event(event_id):
 @login_required
 @host_required
 def cancel_event(event_id):
-    """Cancel an event (marks as not public) and notifies participants."""
+    """Cancel an event and notify participants."""
     event = Event.query.get_or_404(event_id)
     participants = Participation.query.filter_by(event_id=event_id).all()
     approved = [p for p in participants if p.status == 'approved']
 
     send_cancellation_emails(event, approved)
+    event.is_cancelled = True
     event.is_public = False
     db.session.commit()
 
@@ -328,14 +365,34 @@ def cancel_event(event_id):
 @main.route('/discover')
 def discover():
     """
-    Discover page — lists all public events with keyword,
-    category and date filters. Paginated.
+    Discover page — lists all public events with keyword, category,
+    date, mood tag, group size, price and location radius filters.
+    Logs all search queries and filter usage for analytics.
     """
     page = request.args.get('page', 1, type=int)
     keyword = sanitize(request.args.get('q', ''))
     category = request.args.get('category', '')
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
+    mood = sanitize(request.args.get('mood', ''))
+    size_min = request.args.get('size_min', '', type=str)
+    size_max = request.args.get('size_max', '', type=str)
+    price_max = request.args.get('price_max', '', type=str)
+    free_only = request.args.get('free_only', '')
+    radius_km = request.args.get('radius_km', '', type=str)
+    center_lat = request.args.get('center_lat', '', type=str)
+    center_lng = request.args.get('center_lng', '', type=str)
+
+    # Log all search queries and filters for analytics/debugging
+    active_filters = {k: v for k, v in {
+        'keyword': keyword, 'category': category,
+        'date_from': date_from, 'date_to': date_to,
+        'mood': mood, 'size_min': size_min, 'size_max': size_max,
+        'price_max': price_max, 'free_only': free_only,
+        'radius_km': radius_km
+    }.items() if v}
+    if active_filters:
+        logger.info(f'Search query: {active_filters}')
 
     query = Event.query.filter_by(is_public=True)
 
@@ -344,11 +401,14 @@ def discover():
             db.or_(
                 Event.title.ilike(f'%{keyword}%'),
                 Event.description.ilike(f'%{keyword}%'),
-                Event.mood_tags.ilike(f'%{keyword}%')
+                Event.mood_tags.ilike(f'%{keyword}%'),
+                Event.location_text.ilike(f'%{keyword}%')
             )
         )
     if category:
         query = query.filter_by(category=category)
+    if mood:
+        query = query.filter(Event.mood_tags.ilike(f'%{mood}%'))
     if date_from:
         try:
             query = query.filter(
@@ -361,21 +421,124 @@ def discover():
                 Event.event_time <= datetime.strptime(date_to, '%Y-%m-%d'))
         except ValueError:
             pass
+    if free_only:
+        query = query.filter(db.or_(Event.price == 0.0, Event.price.is_(None)))
+    elif price_max:
+        try:
+            query = query.filter(Event.price <= float(price_max))
+        except ValueError:
+            pass
+    if size_min:
+        try:
+            query = query.filter(Event.capacity_max >= int(size_min))
+        except ValueError:
+            pass
+    if size_max:
+        try:
+            query = query.filter(Event.capacity_min <= int(size_max))
+        except ValueError:
+            pass
 
     query = query.order_by(Event.event_time.asc())
-    events = query.paginate(page=page, per_page=12, error_out=False)
+    all_events = query.all()
+
+    # Location radius filter (post-query, needs lat/lng math)
+    if radius_km and center_lat and center_lng:
+        try:
+            all_events = filter_events_by_radius(
+                all_events,
+                float(center_lat),
+                float(center_lng),
+                float(radius_km)
+            )
+            logger.info(f'Radius filter: {radius_km}km from ({center_lat},{center_lng}) -> {len(all_events)} results')
+        except ValueError:
+            pass
+
+    # Manual pagination after radius filter
+    per_page = 12
+    total = len(all_events)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_events = all_events[start:end]
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
 
     categories = [
-        'social', 'sports', 'arts', 'music',
-        'food', 'outdoors', 'games', 'education', 'other'
+        ('social', 'Social'),
+        ('sports', 'Sports'),
+        ('arts and culture', 'Arts & Culture'),
+        ('music', 'Music'),
+        ('food and drinks', 'Food & Drinks'),
+        ('outdoors', 'Outdoors'),
+        ('games', 'Games'),
+        ('education', 'Education'),
+        ('technology', 'Technology'),
+        ('wellness and health', 'Wellness & Health'),
+        ('travel', 'Travel'),
+        ('other', 'Other')
     ]
+
     return render_template('events/discover.html',
-                           events=events,
+                           events=paginated_events,
+                           total=total,
+                           page=page,
+                           total_pages=total_pages,
+                           has_prev=page > 1,
+                           has_next=page < total_pages,
+                           prev_num=page - 1,
+                           next_num=page + 1,
                            categories=categories,
                            keyword=keyword,
                            selected_category=category,
                            date_from=date_from,
-                           date_to=date_to)
+                           date_to=date_to,
+                           mood=mood,
+                           size_min=size_min,
+                           size_max=size_max,
+                           price_max=price_max,
+                           free_only=free_only,
+                           radius_km=radius_km,
+                           center_lat=center_lat,
+                           center_lng=center_lng)
+
+
+# ============================================================
+# BOOKMARKS
+# ============================================================
+
+@main.route('/bookmarks')
+@login_required
+def bookmarks():
+    """Show all events bookmarked by the current user."""
+    user_bookmarks = Bookmark.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Bookmark.created_at.desc()).all()
+    return render_template('events/bookmarks.html', bookmarks=user_bookmarks)
+
+
+@main.route('/events/<int:event_id>/bookmark', methods=['POST'])
+@login_required
+def toggle_bookmark(event_id):
+    """Add or remove a bookmark for an event."""
+    event = Event.query.get_or_404(event_id)
+    existing = Bookmark.query.filter_by(
+        user_id=current_user.id,
+        event_id=event_id
+    ).first()
+
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        flash('Bookmark removed.', 'info')
+        logger.info(f'Bookmark removed: user={current_user.id} event={event_id}')
+    else:
+        bookmark = Bookmark(user_id=current_user.id, event_id=event_id)
+        db.session.add(bookmark)
+        db.session.commit()
+        flash('Event bookmarked!', 'success')
+        logger.info(f'Bookmark added: user={current_user.id} event={event_id}')
+
+    return redirect(url_for('main.event_detail', event_id=event_id))
 
 
 @main.route('/my-events')
@@ -450,7 +613,11 @@ def profile(user_id):
 def edit_profile():
     """Edit the current user's profile."""
     if request.method == 'POST':
-        current_user.name = sanitize(request.form.get('name', ''))
+        name = sanitize(request.form.get('name', '')).strip()
+        if not name:
+            flash('Name cannot be empty.', 'danger')
+            return render_template('profiles/edit_profile.html', user=current_user)
+        current_user.name = name
         current_user.bio = sanitize(request.form.get('bio', ''))
         current_user.location = sanitize(request.form.get('location', ''))
         current_user.interests = sanitize(request.form.get('interests', ''))

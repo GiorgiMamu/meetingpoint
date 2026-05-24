@@ -3,7 +3,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Regexp
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField, BooleanField
-from wtforms.validators import Optional, NumberRange
+from wtforms.validators import Optional, NumberRange, ValidationError as WTFValidationError
 from app.models import User
 import bleach
 
@@ -145,12 +145,15 @@ class EventForm(FlaskForm):
         ('', 'Select a category'),
         ('social', 'Social'),
         ('sports', 'Sports'),
-        ('arts', 'Arts & Culture'),
+        ('arts and culture', 'Arts & Culture'),
         ('music', 'Music'),
-        ('food', 'Food & Drinks'),
+        ('food and drinks', 'Food & Drinks'),
         ('outdoors', 'Outdoors'),
         ('games', 'Games'),
         ('education', 'Education'),
+        ('technology', 'Technology'),
+        ('wellness and health', 'Wellness & Health'),
+        ('travel', 'Travel'),
         ('other', 'Other')
     ], validators=[DataRequired(message='Please select a category.')])
     mood_tags = SanitizedStringField('Mood tags (comma separated)', validators=[
@@ -172,6 +175,14 @@ class EventForm(FlaskForm):
         Optional(),
         NumberRange(min=0)
     ])
+    currency = SelectField('Currency', choices=[
+        ('GEL', 'GEL — Georgian Lari'),
+        ('USD', 'USD — US Dollar'),
+        ('EUR', 'EUR — Euro'),
+        ('GBP', 'GBP — British Pound'),
+        ('TRY', 'TRY — Turkish Lira'),
+        ('RUB', 'RUB — Russian Ruble'),
+    ])
     is_public = BooleanField('Public event', default=True)
     approval_mode = SelectField('Approval mode', choices=[
         ('automatic', 'Automatic — anyone can join instantly'),
@@ -184,3 +195,13 @@ class EventForm(FlaskForm):
         if field.data and self.capacity_min.data:
             if field.data < self.capacity_min.data:
                 raise ValidationError('Maximum capacity must be greater than minimum.')
+
+    def validate_lat(self, field):
+        if field.data is not None:
+            if field.data < -90 or field.data > 90:
+                raise ValidationError('Latitude must be between -90 and 90.')
+
+    def validate_lng(self, field):
+        if field.data is not None:
+            if field.data < -180 or field.data > 180:
+                raise ValidationError('Longitude must be between -180 and 180.')

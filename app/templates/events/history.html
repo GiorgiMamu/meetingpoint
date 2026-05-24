@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}History — MeetingPoint{% endblock %}
 {% block content %}
+{% set category_labels = {
+    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
+    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
+    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
+    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
+} %}
 <h2 class="mb-4">My Event History</h2>
 
 <h5 class="section-title">Upcoming</h5>

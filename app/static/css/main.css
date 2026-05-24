@@ -431,6 +431,9 @@ h1, h2, h3, h4, h5 { color: var(--forest-dark); font-weight: 700; }
   border-color: var(--forest-dark);
 }
 
+.badge {
+    text-transform: uppercase;
+}
 /* ── Cookie banner ── */
 #cookie-banner {
   z-index: 9999;
@@ -440,11 +443,11 @@ h1, h2, h3, h4, h5 { color: var(--forest-dark); font-weight: 700; }
 
 /* ── Footer ── */
 footer {
-  background-color: var(--forest-dark) !important;
-  color: var(--moss-light) !important;
-  border-top: none !important;
-  padding: 1.2rem 0 !important;
-  margin-top: auto !important;
+    background-color: var(--forest-dark) !important;
+    color: var(--moss-light) !important;
+    border-top: none !important;
+    padding: 0.6rem 0 !important;
+    margin-top: auto !important;
 }
 
 footer a { color: var(--sand-light) !important; }
@@ -483,4 +486,9 @@ footer small { color: var(--moss-light); }
   .hero h1 { font-size: 2rem; }
   .hero { padding: 2.5rem 1rem; }
   .auth-card { padding: 1.5rem 1rem; }
+}
+
+.list-group-item-action:hover {
+    background-color: var(--sand-dark) !important;
+    color: var(--charcoal-dark) !important;
 }

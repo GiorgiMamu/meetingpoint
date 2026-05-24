@@ -1,17 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Discover — MeetingPoint{% endblock %}
-{% block content %}
 
+{% block content %}
+{% set category_labels = {
+    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
+    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
+    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
+    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
+} %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Discover Events</h2>
     {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.create_event') }}" class="btn btn-success">➕ Create an event</a>
+        <a href="{{ url_for('main.create_event') }}" class="btn btn-success">+ Create Event</a>
     {% endif %}
 </div>
 
-<div class="search-bar">
-    <form method="GET" action="{{ url_for('main.discover') }}">
-        <div class="row g-2 align-items-end">
+<!-- Search & Filter Bar -->
+<div class="search-bar mb-4">
+    <form method="GET" action="{{ url_for('main.discover') }}" id="discover-form">
+
+        <div class="row g-2 mb-2">
             <div class="col-md-4">
                 <label class="form-label small fw-semibold mb-1">Search</label>
                 <input type="text" name="q" class="form-control"
@@ -21,9 +29,9 @@
                 <label class="form-label small fw-semibold mb-1">Category</label>
                 <select name="category" class="form-select">
                     <option value="">All categories</option>
-                    {% for cat in categories %}
-                        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
-                            {{ cat|capitalize }}
+                    {% for value, label in categories %}
+                        <option value="{{ value }}" {% if value == selected_category %}selected{% endif %}>
+                            {{ label }}
                         </option>
                     {% endfor %}
                 </select>
@@ -36,16 +44,93 @@
                 <label class="form-label small fw-semibold mb-1">To</label>
                 <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
             </div>
-            <div class="col-md-1">
+            <div class="col-md-1 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Go</button>
             </div>
         </div>
+
+        <!-- Advanced filters -->
+        <div class="row g-2">
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Mood Tag</label>
+                <input type="text" name="mood" class="form-control"
+                       placeholder="e.g. chill" value="{{ mood }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Min Group Size</label>
+                <input type="number" name="size_min" class="form-control"
+                       placeholder="e.g. 5" min="1" value="{{ size_min }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Max Group Size</label>
+                <input type="number" name="size_max" class="form-control"
+                       placeholder="e.g. 20" min="1" value="{{ size_max }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Max Price (GEL)</label>
+                <input type="number" name="price_max" class="form-control"
+                       placeholder="e.g. 10" min="0" step="0.01"
+                       value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input type="checkbox" name="free_only" value="1"
+                           class="form-check-input" id="free_only"
+                           {% if free_only %}checked{% endif %}
+                           onchange="document.querySelector('[name=price_max]').disabled = this.checked">
+                    <label class="form-check-label" for="free_only">Free only</label>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary w-100 mb-2">Clear</a>
+            </div>
+        </div>
+
+        <!-- Location radius filter -->
+        <div class="row g-2 mt-1 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">📍 Search near location</label>
+                <input type="text" id="radius-location-input" class="form-control"
+                       placeholder="Type a location...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Radius (km)</label>
+                <input type="number" name="radius_km" class="form-control"
+                       placeholder="e.g. 10" min="1" max="500" value="{{ radius_km }}">
+            </div>
+            <input type="hidden" name="center_lat" id="center_lat" value="{{ center_lat }}">
+            <input type="hidden" name="center_lng" id="center_lng" value="{{ center_lng }}">
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-primary w-100"
+                        onclick="geocodeRadiusLocation()">Set Location</button>
+            </div>
+            {% if center_lat and center_lng %}
+            <div class="col-md-3">
+                <span class="text-muted small">
+                    📌 Center set: {{ center_lat|float|round(4) }}, {{ center_lng|float|round(4) }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
     </form>
 </div>
 
-{% if events.items %}
+<!-- Map View -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <div id="map" style="height: 380px; border-radius: var(--radius);"></div>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <span class="text-muted small">{{ total }} event{{ 's' if total != 1 else '' }} found</span>
+</div>
+
+{% if events %}
     <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for event in events.items %}
+        {% for event in events %}
         <div class="col">
             <div class="card card-event h-100">
                 {% if event.photo %}
@@ -66,9 +151,9 @@
                         <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
                     {% endif %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ event.category }}</span>
+                        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
                         {% if event.price and event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} GEL</span>
+                                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
                         {% else %}
                             <span class="badge bg-success">Free</span>
                         {% endif %}
@@ -83,23 +168,28 @@
         {% endfor %}
     </div>
 
+    <!-- Pagination -->
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
-            {% if events.has_prev %}
+            {% if has_prev %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover', page=events.prev_num,
-                       q=keyword, category=selected_category,
-                       date_from=date_from, date_to=date_to) }}">← Previous</a>
+                    <a class="page-link" href="{{ url_for('main.discover', page=prev_num,
+                       q=keyword, category=selected_category, date_from=date_from,
+                       date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
+                       price_max=price_max, free_only=free_only, radius_km=radius_km,
+                       center_lat=center_lat, center_lng=center_lng) }}">← Previous</a>
                 </li>
             {% endif %}
             <li class="page-item disabled">
-                <span class="page-link">Page {{ events.page }} of {{ events.pages }}</span>
+                <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
             </li>
-            {% if events.has_next %}
+            {% if has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover', page=events.next_num,
-                       q=keyword, category=selected_category,
-                       date_from=date_from, date_to=date_to) }}">Next →</a>
+                    <a class="page-link" href="{{ url_for('main.discover', page=next_num,
+                       q=keyword, category=selected_category, date_from=date_from,
+                       date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
+                       price_max=price_max, free_only=free_only, radius_km=radius_km,
+                       center_lat=center_lat, center_lng=center_lng) }}">Next →</a>
                 </li>
             {% endif %}
         </ul>
@@ -108,7 +198,110 @@
     <div class="empty-state">
         <div style="font-size:3rem; margin-bottom:1rem;">🔍</div>
         <h5>No events found</h5>
-        <p>Try adjusting your filters or <a href="{{ url_for('main.create_event') }}">create one yourself</a>.</p>
+        <p>Try adjusting your filters or
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('main.create_event') }}">create one yourself</a>.
+            {% else %}
+                <a href="{{ url_for('main.login') }}">log in to create one</a>.
+            {% endif %}
+        </p>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet.js -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+// ── Map initialization ──
+var map = L.map('map').setView([41.6938, 44.8015], 12);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+var markers = L.markerClusterGroup();
+
+var events = [
+    {% for event in events %}
+    {% if event.lat and event.lng %}
+    {
+        lat: {{ event.lat }},
+        lng: {{ event.lng }},
+        title: {{ event.title | tojson }},
+        url: "{{ url_for('main.event_detail', event_id=event.id) }}",
+        time: {{ event.event_time.strftime('%b %d, %Y') | tojson }},
+        location: {{ (event.location_text or '') | tojson }}
+    },
+    {% endif %}
+    {% endfor %}
+];
+
+events.forEach(function(e) {
+    var marker = L.marker([e.lat, e.lng]);
+    marker.bindPopup(
+        '<strong><a href="' + e.url + '">' + e.title + '</a></strong><br>' +
+        '📅 ' + e.time + '<br>' +
+        (e.location ? '📍 ' + e.location : '')
+    );
+    markers.addLayer(marker);
+});
+
+map.addLayer(markers);
+
+// Fit map to markers if any exist
+{% if center_lat and center_lng %}
+// Radius search active — center map on the search location
+var centerLat = {{ center_lat|float }};
+var centerLng = {{ center_lng|float }};
+var radiusKm = {{ radius_km|float if radius_km else 10 }};
+map.setView([centerLat, centerLng], 11);
+
+// Draw a circle showing the search radius
+L.circle([centerLat, centerLng], {
+    radius: radiusKm * 1000,
+    color: '#1F3D2B',
+    fillColor: '#4E7A5A',
+    fillOpacity: 0.1,
+    weight: 2
+}).addTo(map);
+{% else %}
+// No radius filter — fit to all markers
+if (events.length > 0) {
+    var validEvents = events.filter(function(e) { return e.lat && e.lng; });
+    if (validEvents.length > 0) {
+        var bounds = L.latLngBounds(validEvents.map(function(e) { return [e.lat, e.lng]; }));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    }
+}
+{% endif %}
+// ── Radius location geocoding ──
+function geocodeRadiusLocation() {
+    var input = document.getElementById('radius-location-input').value.trim();
+    if (!input) { alert('Please enter a location.'); return; }
+
+    var radiusKm = document.querySelector('[name="radius_km"]').value;
+    if (!radiusKm) {
+        document.querySelector('[name="radius_km"]').value = '10';
+    }
+
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(input))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                document.getElementById('center_lat').value = data[0].lat;
+                document.getElementById('center_lng').value = data[0].lon;
+                document.getElementById('discover-form').submit();
+            } else {
+                alert('Location not found. Try a different search.');
+            }
+        })
+        .catch(function() { alert('Geocoding failed. Check your connection.'); });
+}
+</script>
 {% endblock %}

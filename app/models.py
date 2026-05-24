@@ -27,6 +27,7 @@ class User(UserMixin, db.Model):
     is_profile_public = db.Column(db.Boolean, default=True)
     is_history_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    password_reset_token = db.Column(db.String(255), nullable=True)
 
     events = db.relationship('Event', backref='host', lazy=True,
                              foreign_keys='Event.host_id')
@@ -70,6 +71,8 @@ class Event(db.Model):
     capacity_max = db.Column(db.Integer)
     price = db.Column(db.Float, default=0.0)
     is_public = db.Column(db.Boolean, default=True)
+    is_cancelled = db.Column(db.Boolean, default=False)
+    currency = db.Column(db.String(10), default='GEL')
     approval_mode = db.Column(db.String(20), default='automatic')
     participant_list_visible = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -38,7 +38,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My events</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
-                            <li><a class="dropdown-item" href="#">Bookmarks</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.bookmarks') }}">Bookmarks</a></li>
                             <li><a class="dropdown-item" href="#">Settings</a></li>
                             {% if current_user.is_admin() %}
                             <li><hr class="dropdown-divider"></li>
@@ -88,8 +88,8 @@
 </div>
 {% endif %}
 
-<footer class="mt-5">
-    <div class="container text-center py-3">
+<footer class="mt-4">
+    <div class="container text-center py-2">
         <small>
             &copy; 2026 MeetingPoint &nbsp;|&nbsp;
             <a href="{{ url_for('main.privacy') }}">Privacy Policy</a> &nbsp;|&nbsp;

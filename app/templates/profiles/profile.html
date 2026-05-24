@@ -8,7 +8,9 @@
                 <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
                      class="avatar-img">
             {% else %}
-                <div class="avatar-circle">{{ user.name[0].upper() }}</div>
+                <div class="avatar-circle">
+                    {{ user.name.strip()[0].upper() if user.name and user.name.strip() else '?' }}
+                </div>
             {% endif %}
 
             <h3 class="mb-1">{{ user.name }}</h3>
@@ -21,7 +23,9 @@
             {% if user.interests %}
                 <div class="mt-2 d-flex flex-wrap justify-content-center gap-1">
                     {% for interest in user.interests.split(',') %}
-                        <span class="badge bg-secondary">{{ interest.strip() }}</span>
+                        <span class="badge bg-secondary" style="max-width:150px; white-space:normal; word-break:break-word; text-align:center;">
+                            {{ interest.strip() }}
+                        </span>
                     {% endfor %}
                 </div>
             {% endif %}
