@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}My Events — MeetingPoint{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">My Events</h2>
+    <a href="{{ url_for('main.create_event') }}" class="btn btn-success">➕ Create an event</a>
+</div>
+
+{% if events %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+                               class="fw-semibold text-decoration-none">
+                                {{ event.title }}
+                            </a>
+                        </td>
+                        <td class="text-muted small">{{ event.event_time.strftime('%b %d, %Y') }}</td>
+                        <td><span class="badge bg-secondary">{{ event.category }}</span></td>
+                        <td>
+                            {% if event.is_public %}
+                                <span class="badge bg-success">Public</span>
+                            {% else %}
+                                <span class="badge bg-warning">Private/Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
+                                   class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form method="POST"
+                                      action="{{ url_for('main.delete_event', event_id=event.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this event?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
+        <h5>No events yet</h5>
+        <p>You haven't created any events yet.</p>
+    </div>
+{% endif %}
+{% endblock %}

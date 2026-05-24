@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}History — MeetingPoint{% endblock %}
+{% block content %}
+<h2 class="mb-4">My Event History</h2>
+
+<h5 class="section-title">Upcoming</h5>
+{% if upcoming %}
+    <div class="list-group mb-4">
+        {% for event in upcoming %}
+            <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+               class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ event.title }}</strong>
+                        {% if event.location_text %}
+                            <span class="text-muted small ms-2">📍 {{ event.location_text }}</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y · %H:%M') }}</small>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-muted mb-4">No upcoming events.</p>
+{% endif %}
+
+<h5 class="section-title">Past</h5>
+{% if past %}
+    <div class="list-group">
+        {% for event in past %}
+            <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+               class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ event.title }}</strong>
+                        {% if event.location_text %}
+                            <span class="text-muted small ms-2">📍 {{ event.location_text }}</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y · %H:%M') }}</small>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-muted">No past events.</p>
+{% endif %}
+{% endblock %}

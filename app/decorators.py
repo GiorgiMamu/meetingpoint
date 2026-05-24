@@ -22,10 +22,6 @@ def active_required(f):
 
 
 def host_required(f):
-    """
-    Use on event-specific routes that receive an event_id parameter.
-    Aborts with 403 if the current user is not the host of that event.
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from app.models import Event

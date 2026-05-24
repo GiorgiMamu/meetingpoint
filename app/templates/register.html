@@ -2,48 +2,54 @@
 {% block title %}Register — MeetingPoint{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-5">
-        <h2 class="mb-4">Create an account</h2>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-                {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, pattern="[^<>{}()\\[\\]]*") }}
-                {% for error in form.name.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control", required=True, type="email", maxlength=150) }}
-                {% for error in form.email.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control", required=True, minlength=8, maxlength=128) }}
-                {% for error in form.password.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.confirm_password.label(class="form-label") }}
-                {{ form.confirm_password(class="form-control", required=True, minlength=8, maxlength=128) }}
-                {% for error in form.confirm_password.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            {{ form.submit(class="btn btn-primary w-100") }}
-        </form>
-        <p class="mt-3 text-center">Already have an account? <a href="{{ url_for('main.login') }}">Log in</a></p>
+    <div class="col-md-5 col-lg-4">
+        <div class="auth-card">
+            <h2 class="text-center">Create an account</h2>
+            <p class="text-center text-muted mb-4">Join MeetingPoint — it's free</p>
+            <form method="POST" id="register-form">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, placeholder="Your name") }}
+                    {% for error in form.name.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control", required=True, type="email", maxlength=150, placeholder="you@example.com") }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", required=True, minlength=8, maxlength=72, placeholder="8–72 characters") }}
+                    {% for error in form.password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    {{ form.confirm_password.label(class="form-label") }}
+                    {{ form.confirm_password(class="form-control", required=True, minlength=8, maxlength=72, placeholder="Repeat password") }}
+                    {% for error in form.confirm_password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {{ form.submit(class="btn btn-primary w-100") }}
+            </form>
+            <hr class="my-3">
+            <p class="text-center text-muted small mb-0">
+                Already have an account? <a href="{{ url_for('main.login') }}">Log In</a>
+            </p>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.querySelector('form').addEventListener('submit', function(e) {
+    document.getElementById('register-form').addEventListener('submit', function(e) {
         const pw = document.getElementById('password');
         const cpw = document.getElementById('confirm_password');
         if (pw && cpw && pw.value !== cpw.value) {

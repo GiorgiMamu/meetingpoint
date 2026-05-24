@@ -8,6 +8,8 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 class User(UserMixin, db.Model):
+    """Represents a registered user of MeetingPoint."""
+
     __tablename__ = 'users'
     __table_args__ = (
         db.Index('ix_users_role', 'role'),
@@ -46,6 +48,8 @@ class User(UserMixin, db.Model):
 
 
 class Event(db.Model):
+    """Represents an event created by a host user."""
+
     __tablename__ = 'events'
     __table_args__ = (
         db.Index('ix_events_host_id', 'host_id'),
@@ -81,6 +85,8 @@ class Event(db.Model):
 
 
 class Participation(db.Model):
+    """Tracks a user's participation in an event, including approval status."""
+
     __tablename__ = 'participations'
     __table_args__ = (
         db.Index('ix_participations_user_id', 'user_id'),
@@ -97,6 +103,8 @@ class Participation(db.Model):
 
 
 class Message(db.Model):
+    """A chat message sent in an event's group chat."""
+
     __tablename__ = 'messages'
     __table_args__ = (
         db.Index('ix_messages_event_id', 'event_id'),
@@ -113,6 +121,8 @@ class Message(db.Model):
 
 
 class Bookmark(db.Model):
+    """A saved/bookmarked event for a user."""
+
     __tablename__ = 'bookmarks'
     __table_args__ = (
         db.Index('ix_bookmarks_user_id', 'user_id'),
@@ -127,6 +137,8 @@ class Bookmark(db.Model):
 
 
 class Follow(db.Model):
+    """A follow relationship between two users."""
+
     __tablename__ = 'follows'
     __table_args__ = (
         db.Index('ix_follows_follower_id', 'follower_id'),
@@ -142,6 +154,8 @@ class Follow(db.Model):
 
 
 class Notification(db.Model):
+    """An in-app notification delivered to a user."""
+
     __tablename__ = 'notifications'
     __table_args__ = (
         db.Index('ix_notifications_user_id', 'user_id'),

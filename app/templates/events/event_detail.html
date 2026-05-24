@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — MeetingPoint{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        {% if event.photo %}
+            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+                 class="event-header-img">
+        {% endif %}
+
+        <h1 class="mb-1">{{ event.title }}</h1>
+        <p class="event-meta">
+            📅 <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
+            {% if event.location_text %} &nbsp;·&nbsp; 📍 {{ event.location_text }}{% endif %}
+        </p>
+
+        <div class="d-flex flex-wrap gap-1 mb-3">
+            {% if event.category %}
+                <span class="badge bg-secondary">{{ event.category }}</span>
+            {% endif %}
+            {% if event.mood_tags %}
+                {% for tag in event.mood_tags.split(',') %}
+                    <span class="badge bg-info">{{ tag.strip() }}</span>
+                {% endfor %}
+            {% endif %}
+            {% if event.price and event.price > 0 %}
+                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} GEL</span>
+            {% else %}
+                <span class="badge bg-success">Free</span>
+            {% endif %}
+            {% if event.capacity_max %}
+                <span class="badge" style="background:var(--charcoal-light)">
+                    Max {{ event.capacity_max }} people
+                </span>
+            {% endif %}
+        </div>
+
+        <hr>
+        <p style="white-space: pre-wrap; line-height: 1.7;">{{ event.description or 'No description provided.' }}</p>
+
+        <p class="text-muted small mt-3">
+            Hosted by
+            <a href="{{ url_for('main.profile', user_id=event.host.id) }}" class="fw-semibold">
+                {{ event.host.name }}
+            </a>
+        </p>
+    </div>
+
+    <div class="col-lg-4 event-sidebar">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="section-title">Participation</h6>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.id == event.host_id %}
+                        <p class="text-muted small mb-3">You are the host of this event.</p>
+                        <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
+                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit event</a>
+                        <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-warning w-100 mb-2"
+                                    onclick="return confirm('Cancel this event and notify all participants?')">
+                                ⚠️ Cancel event
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    onclick="return confirm('Permanently delete this event? Participants will be notified and this cannot be undone.')">
+                                🗑️ Delete event
+                            </button>
+                        </form>
+                    {% elif user_participation %}
+                        {% if user_participation.status == 'pending' %}
+                            <div class="alert alert-warning mb-0">⏳ Your request is pending approval.</div>
+                        {% elif user_participation.status == 'approved' %}
+                            <div class="alert alert-success mb-0">✅ You are attending this event.</div>
+                        {% elif user_participation.status == 'declined' %}
+                            <div class="alert alert-danger mb-0">❌ Your request was declined.</div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted small">Join this event to participate and access the group chat.</p>
+                        <button class="btn btn-primary w-100" disabled>
+                            Join Event <span class="badge bg-warning text-dark ms-1">Phase 4</span>
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted small">
+                        <a href="{{ url_for('main.login') }}">Log in</a> to join this event.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if participants %}
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="section-title">Participants ({{ participants|length }})</h6>
+                {% for p in participants[:8] %}
+                    <a href="{{ url_for('main.profile', user_id=p.user_id) }}"
+                       class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center
+                                    justify-content-center"
+                             style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;">
+                            {{ p.user.name[0].upper() }}
+                        </div>
+                        <span class="small">{{ p.user.name }}</span>
+                    </a>
+                {% endfor %}
+                {% if participants|length > 8 %}
+                    <p class="text-muted small mt-1">+{{ participants|length - 8 }} more</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
