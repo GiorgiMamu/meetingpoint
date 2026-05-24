@@ -18,7 +18,7 @@ bcrypt = Bcrypt()
 csrf = CSRFProtect()
 mail = Mail()
 migrate = Migrate()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "60 per hour"])
 
 def create_app(config_name='default'):
     app = Flask(__name__, instance_relative_config=True)
@@ -51,8 +51,15 @@ def create_app(config_name='default'):
     app.logger.setLevel(logging.INFO)
     app.logger.info('MeetingPoint startup')
 
+    from app import models
+
     # Register blueprints
     from app.routes import main
     app.register_blueprint(main)
+
+    @app.before_request
+    def make_session_permanent():
+        from flask import session
+        session.permanent = True
 
     return app
