@@ -24,22 +24,30 @@ class User(UserMixin, db.Model):
     profile_photo = db.Column(db.String(255))
     role = db.Column(db.String(20), nullable=False, default='user')
     is_active = db.Column(db.Boolean, default=False)
+    is_blocked = db.Column(db.Boolean, default=False)
     is_profile_public = db.Column(db.Boolean, default=True)
     is_history_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     password_reset_token = db.Column(db.String(255), nullable=True)
 
     events = db.relationship('Event', backref='host', lazy=True,
-                             foreign_keys='Event.host_id')
-    participations = db.relationship('Participation', backref='user', lazy=True)
-    bookmarks = db.relationship('Bookmark', backref='user', lazy=True)
-    notifications = db.relationship('Notification', backref='user', lazy=True)
-    messages = db.relationship('Message', backref='author', lazy=True)
+                             foreign_keys='Event.host_id',
+                             cascade='all, delete-orphan')
+    participations = db.relationship('Participation', backref='user', lazy=True,
+                                    cascade='all, delete-orphan')
+    bookmarks = db.relationship('Bookmark', backref='user', lazy=True,
+                               cascade='all, delete-orphan')
+    notifications = db.relationship('Notification', backref='user', lazy=True,
+                                   cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='author', lazy=True,
+                              cascade='all, delete-orphan')
 
     following = db.relationship('Follow', foreign_keys='Follow.follower_id',
-                                backref='follower', lazy='dynamic')
+                                backref='follower', lazy='dynamic',
+                                cascade='all, delete-orphan')
     followers = db.relationship('Follow', foreign_keys='Follow.followed_id',
-                                backref='followed', lazy='dynamic')
+                                backref='followed', lazy='dynamic',
+                                cascade='all, delete-orphan')
 
     def is_admin(self):
         return self.role == 'admin'
@@ -72,13 +80,16 @@ class Event(db.Model):
     price = db.Column(db.Float, default=0.0)
     is_public = db.Column(db.Boolean, default=True)
     is_cancelled = db.Column(db.Boolean, default=False)
+    is_anonymous = db.Column(db.Boolean, default=False)
     currency = db.Column(db.String(10), default='GEL')
     approval_mode = db.Column(db.String(20), default='automatic')
     participant_list_visible = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    participations = db.relationship('Participation', backref='event', lazy=True)
-    messages = db.relationship('Message', backref='event', lazy=True)
+    participations = db.relationship('Participation', backref='event', lazy=True,
+                                    cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='event', lazy=True,
+                              cascade='all, delete-orphan')
     bookmarks = db.relationship(
         'Bookmark',
         backref='event',
@@ -87,7 +98,8 @@ class Event(db.Model):
         passive_deletes=True
     )
     notifications = db.relationship('Notification', backref='related_event',
-                                    lazy=True, foreign_keys='Notification.related_event_id')
+                                    lazy=True, foreign_keys='Notification.related_event_id',
+                                    cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Event {self.title}>'

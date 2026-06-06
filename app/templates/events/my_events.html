@@ -41,8 +41,19 @@
                         </td>
                         <td>
                             <div class="d-flex gap-1">
+                                <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">View</a>
                                 <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
                                    class="btn btn-sm btn-outline-primary">Edit</a>
+                                {% if not event.is_cancelled %}
+                                    <form method="POST"
+                                          action="{{ url_for('main.cancel_event', event_id=event.id) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Are you sure you want to cancel this event?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Cancel</button>
+                                    </form>
+                                {% endif %}
                                 <form method="POST"
                                       action="{{ url_for('main.delete_event', event_id=event.id) }}"
                                       class="d-inline">

@@ -185,6 +185,7 @@ class EventForm(FlaskForm):
         ('RUB', 'RUB — Russian Ruble'),
     ])
     is_public = BooleanField('Public event', default=True)
+    is_anonymous = BooleanField('Hide host identity', default=False)
     approval_mode = SelectField('Approval mode', choices=[
         ('automatic', 'Automatic — anyone can join instantly'),
         ('manual', 'Manual — you approve each participant')

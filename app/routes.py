@@ -16,7 +16,7 @@ from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails,
                        geocode_location, filter_events_by_radius)
-from app.decorators import admin_required, host_required
+from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from datetime import datetime
 import logging
 
@@ -194,6 +194,8 @@ def reset_password(token):
 
 @main.route('/events/create', methods=['GET', 'POST'])
 @login_required
+@active_required
+@not_blocked_required
 def create_event():
     """Create a new event. Host only."""
     form = EventForm()
@@ -228,6 +230,7 @@ def create_event():
             price=form.price.data or 0.0,
             currency=form.currency.data,
             is_public=form.is_public.data,
+            is_anonymous=form.is_anonymous.data if current_user.is_admin() else False,
             approval_mode=form.approval_mode.data,
             participant_list_visible=form.participant_list_visible.data
         )
@@ -270,6 +273,8 @@ def event_detail(event_id):
 
 @main.route('/events/<int:event_id>/edit', methods=['GET', 'POST'])
 @login_required
+@active_required
+@not_blocked_required
 @host_required
 def edit_event(event_id):
     """Edit an existing event. Host only."""
@@ -304,6 +309,8 @@ def edit_event(event_id):
         event.price = form.price.data or 0.0
         event.currency = form.currency.data
         event.is_public = form.is_public.data
+        if current_user.is_admin():
+            event.is_anonymous = form.is_anonymous.data
         event.approval_mode = form.approval_mode.data
         event.participant_list_visible = form.participant_list_visible.data
 
@@ -319,10 +326,12 @@ def edit_event(event_id):
 
 @main.route('/events/<int:event_id>/delete', methods=['POST'])
 @login_required
-@host_required
+@active_required
 def delete_event(event_id):
-    """Delete an event and notify participants. Host only."""
+    """Delete an event and notify participants. Host or Admin."""
     event = Event.query.get_or_404(event_id)
+    if event.host_id != current_user.id and not current_user.is_admin():
+        abort(403)
     participants = Participation.query.filter_by(event_id=event_id).all()
     approved = [p for p in participants if p.status == 'approved']
 
@@ -337,15 +346,17 @@ def delete_event(event_id):
 
     logger.info(f'Event deleted: {event_id} by user {current_user.id}')
     flash('Event deleted and participants notified.', 'info')
-    return redirect(url_for('main.my_events'))
+    return redirect(request.args.get('next') or request.referrer or url_for('main.my_events'))
 
 
 @main.route('/events/<int:event_id>/cancel', methods=['POST'])
 @login_required
-@host_required
+@active_required
 def cancel_event(event_id):
     """Cancel an event and notify participants."""
     event = Event.query.get_or_404(event_id)
+    if event.host_id != current_user.id:
+        abort(403)
     participants = Participation.query.filter_by(event_id=event_id).all()
     approved = [p for p in participants if p.status == 'approved']
 
@@ -356,7 +367,7 @@ def cancel_event(event_id):
 
     logger.info(f'Event cancelled: {event_id} by user {current_user.id}')
     flash('Event cancelled and participants notified.', 'info')
-    return redirect(url_for('main.my_events'))
+    return redirect(request.args.get('next') or request.referrer or url_for('main.my_events'))
 
 
 # ============================================================
@@ -519,6 +530,7 @@ def bookmarks():
 
 @main.route('/events/<int:event_id>/bookmark', methods=['POST'])
 @login_required
+@active_required
 def toggle_bookmark(event_id):
     """Add or remove a bookmark for an event."""
     event = Event.query.get_or_404(event_id)
@@ -539,7 +551,7 @@ def toggle_bookmark(event_id):
         flash('Event bookmarked!', 'success')
         logger.info(f'Bookmark added: user={current_user.id} event={event_id}')
 
-    return redirect(url_for('main.event_detail', event_id=event_id))
+    return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
 
 
 @main.route('/my-events')
@@ -585,14 +597,23 @@ def history():
 def profile(user_id):
     """View a user's public profile."""
     user = User.query.get_or_404(user_id)
-    if not user.is_profile_public and (
-            not current_user.is_authenticated or
-            current_user.id != user_id):
-        abort(403)
 
-    hosted_events = Event.query.filter_by(
-        host_id=user_id, is_public=True
-    ).order_by(Event.event_time.desc()).limit(5).all()
+    # Hide admin profiles from others
+    if user.is_admin() and (not current_user.is_authenticated or current_user.id != user.id):
+        if not (current_user.is_authenticated and current_user.is_admin()):
+            abort(404)
+
+    # Filter out anonymous events from public profile view
+    can_see_anon = current_user.is_authenticated and (current_user.is_admin() or current_user.id == user_id)
+    
+    if not user.is_profile_public and not can_see_anon:
+        abort(403)
+    
+    hosted_events_query = Event.query.filter_by(host_id=user_id, is_public=True)
+    if not can_see_anon:
+        hosted_events_query = hosted_events_query.filter_by(is_anonymous=False)
+    
+    hosted_events = hosted_events_query.order_by(Event.event_time.desc()).limit(5).all()
 
     history_events = []
     if user.is_history_public or (
@@ -601,7 +622,11 @@ def profile(user_id):
         participations = Participation.query.filter_by(
             user_id=user_id, status='approved'
         ).all()
-        history_events = [p.event for p in participations]
+        
+        history_events = []
+        for p in participations:
+            if not p.event.is_anonymous or can_see_anon:
+                history_events.append(p.event)
 
     return render_template('profiles/profile.html',
                            user=user,
@@ -611,6 +636,7 @@ def profile(user_id):
 
 @main.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
+@active_required
 def edit_profile():
     """Edit the current user's profile."""
     form = EditProfileForm()
@@ -648,6 +674,64 @@ def privacy():
 def terms():
     """Terms of service page."""
     return render_template('legal/terms.html')
+
+
+# ============================================================
+# ADMIN PANEL
+# ============================================================
+
+@main.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    """List all users for administration."""
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin/users.html', users=users)
+
+
+@main.route('/admin/events')
+@login_required
+@admin_required
+def admin_events():
+    """List all events for administration."""
+    events = Event.query.order_by(Event.created_at.desc()).all()
+    return render_template('admin/events.html', events=events)
+
+
+@main.route('/admin/users/<int:user_id>/toggle_block', methods=['POST'])
+@login_required
+@admin_required
+def toggle_block_user(user_id):
+    """Block or unblock a user."""
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot block yourself.', 'danger')
+        return redirect(url_for('main.admin_users'))
+
+    user.is_blocked = not user.is_blocked
+    db.session.commit()
+    status = 'blocked' if user.is_blocked else 'unblocked'
+    logger.info(f'User {user_id} {status} by admin {current_user.id}')
+    flash(f'User {user.name} has been {status}.', 'success')
+    return redirect(request.referrer or url_for('main.admin_users'))
+
+
+@main.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    """Permanently delete a user account."""
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot delete yourself.', 'danger')
+        return redirect(url_for('main.admin_users'))
+
+    name = user.name
+    db.session.delete(user)
+    db.session.commit()
+    logger.info(f'User {user_id} deleted by admin {current_user.id}')
+    flash(f'User {name} has been permanently deleted.', 'success')
+    return redirect(request.referrer or url_for('main.admin_users'))
 
 
 # ============================================================

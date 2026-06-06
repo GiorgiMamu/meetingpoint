@@ -42,9 +42,13 @@
         </div>
         <p class="text-muted small mt-3">
             Hosted by
-            <a href="{{ url_for('main.profile', user_id=event.host.id) }}" class="fw-semibold">
-                {{ event.host.name }}
-            </a>
+            {% if event.is_anonymous or event.host.role == 'admin' %}
+                <span class="fw-semibold">MeetingPoint Team</span>
+            {% else %}
+                <a href="{{ url_for('main.profile', user_id=event.host.id) }}" class="fw-semibold">
+                    {{ event.host.name }}
+                </a>
+            {% endif %}
         </p>
     </div>
 
@@ -115,10 +119,7 @@
                     </span>
                 </div>
                 <div class="progress mb-1" style="height:6px; border-radius:6px; background:#e9ecef;">
-                    <div class="progress-bar" role="progressbar"
-                         style="width:{{ fill_percent }}%; border-radius:6px;"
-                         class="{% if fill_percent >= 90 %}progress-critical{% elif fill_percent >= 60 %}progress-warning{% else %}progress-safe{% endif %}">
-                    </div>
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 50%; border-radius: 6px;"></div>
                 </div>
                 <div class="d-flex justify-content-between">
                     <small class="text-muted">{{ fill_percent }}% full</small>
@@ -158,12 +159,23 @@
             <div class="card-body">
                 <h6 class="section-title">Participants ({{ participants|length }})</h6>
                 {% for p in participants[:8] %}
-                    <a href="{{ url_for('main.profile', user_id=p.user_id) }}"
-                       class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1">
+                    {% set is_anon_host = (event.is_anonymous or event.host.role == 'admin') and p.user_id == event.host_id %}
+                    <a href="{% if is_anon_host %}#{% else %}{{ url_for('main.profile', user_id=p.user_id) }}{% endif %}"
+                       class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1 {% if is_anon_host %}pe-none{% endif %}">
                         <div class="avatar-initials-sm">
-                            {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                            {% if is_anon_host %}
+                                M
+                            {% else %}
+                                {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                            {% endif %}
                         </div>
-                        <span class="small">{{ p.user.name }}</span>
+                        <span class="small">
+                            {% if is_anon_host %}
+                                MeetingPoint Team
+                            {% else %}
+                                {{ p.user.name }}
+                            {% endif %}
+                        </span>
                     </a>
                 {% endfor %}
                 {% if participants|length > 8 %}

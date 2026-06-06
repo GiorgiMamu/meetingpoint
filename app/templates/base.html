@@ -13,6 +13,13 @@
     <link rel="manifest" href="{{ url_for('static', filename='favicons/site.webmanifest') }}">
 </head>
 <body>
+    {% if current_user.is_authenticated and current_user.is_blocked %}
+    <div class="alert alert-danger alert-dismissible fade show rounded-0 border-0 mb-0 py-2" role="alert" style="background-color: #dc3545; color: white;">
+        <div class="container text-center small">
+            <i class="fas fa-ban me-2"></i> Your account has been limited by an administrator. Some actions are restricted.
+        </div>
+    </div>
+    {% endif %}
 
 <!-- Navigation -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -42,7 +49,9 @@
                             <li><a class="dropdown-item" href="#">Settings</a></li>
                             {% if current_user.is_admin() %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#">Admin panel</a></li>
+                            <li><h6 class="dropdown-header">Admin panel</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.admin_users') }}">Manage users</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.admin_events') }}">Manage events</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Log out</a></li>
