@@ -1,13 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Bookmarks — MeetingPoint{% endblock %}
 {% block content %}
-{% set category_labels = {
-    'social': 'Social', 'sports': 'Sports', 'arts and culture': 'Arts & Culture',
-    'music': 'Music', 'food and drinks': 'Food & Drinks', 'outdoors': 'Outdoors',
-    'games': 'Games', 'education': 'Education', 'technology': 'Technology',
-    'wellness and health': 'Wellness & Health', 'travel': 'Travel', 'other': 'Other'
-} %}
-<h2 class="mb-4">My Bookmarks</h2>
+{% include "_category_labels.html" %}
+<h2 class="mb-4">My bookmarks</h2>
 
 {% if bookmarks %}
     <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -16,11 +11,10 @@
             <div class="card card-event h-100">
                 {% if bookmark.event.photo %}
                     <img src="{{ url_for('static', filename='uploads/' + bookmark.event.photo) }}"
-                         class="card-img-top">
+                         class="card-img-top" alt="{{ bookmark.event.title }} event photo">
                 {% else %}
-                    <div style="height:190px; background: linear-gradient(135deg, var(--forest-dark), var(--sky-dark));
-                                display:flex; align-items:center; justify-content:center;">
-                        <span style="font-size:3rem;">🗓️</span>
+                    <div class="gradient-placeholder">
+                        <span class="gradient-placeholder-icon">🗓️</span>
                     </div>
                 {% endif %}
                 <div class="card-body">
@@ -42,7 +36,7 @@
                 </div>
                 <div class="card-footer d-flex gap-2">
                     <a href="{{ url_for('main.event_detail', event_id=bookmark.event.id) }}"
-                       class="btn btn-outline-primary btn-sm flex-grow-1">View Event</a>
+                       class="btn btn-outline-primary btn-sm flex-grow-1">View event</a>
                     <form method="POST"
                           action="{{ url_for('main.toggle_bookmark', event_id=bookmark.event.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -55,10 +49,10 @@
     </div>
 {% else %}
     <div class="empty-state">
-        <div style="font-size:3rem; margin-bottom:1rem;">🔖</div>
+        <div class="empty-state-icon">🔖</div>
         <h5>No bookmarks yet</h5>
-        <p>Browse events and bookmark the ones you're interested in.</p>
-        <a href="{{ url_for('main.discover') }}" class="btn btn-primary">Discover Events</a>
+        <p>Discover events and bookmark the ones you're interested in.</p>
+        <a href="{{ url_for('main.discover') }}" class="btn btn-primary">Discover events</a>
     </div>
 {% endif %}
 {% endblock %}

@@ -2,17 +2,17 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Regexp
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField, BooleanField
-from wtforms.validators import Optional, NumberRange, ValidationError as WTFValidationError
+from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField
+from wtforms.validators import Optional, NumberRange
 from app.models import User
 import bleach
 
-# bcrypt only considers the first 72 bytes of the password. The underlying
+# bcrypt only considers the first 72 bytes of the password, the underlying
 # `bcrypt` package raises ValueError for longer passwords to avoid silent
-# truncation, so we validate byte-length up-front.
+# truncation, so byte-length is validated up-front
 BCRYPT_MAX_PASSWORD_BYTES = 72
-# For UX we also cap passwords by characters; byte-length may still be lower
-# for passwords containing emojis or some non-ASCII characters.
+# for UX passwords also capped by characters; byte-length may still be lower
+# for passwords containing emojis or some non-ASCII characters
 BCRYPT_MAX_PASSWORD_CHARS = 72
 
 BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
@@ -21,7 +21,7 @@ BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
 
 def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
 
-    def _validator(form, field):
+    def _validator(field):
         if not field.data:
             return
         try:
@@ -91,7 +91,7 @@ class LoginForm(FlaskForm):
         bcrypt_max_bytes(),
     ])
     remember = BooleanField('Remember me')
-    submit = SubmitField('Log In')
+    submit = SubmitField('Log in')
 
 
 class RequestPasswordResetForm(FlaskForm):
@@ -160,7 +160,7 @@ class EventForm(FlaskForm):
         Optional(),
         Length(max=255)
     ])
-    photo = FileField('Event Photo', validators=[
+    photo = FileField('Event photo', validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only.')
     ])
     capacity_min = IntegerField('Minimum capacity', validators=[
@@ -194,7 +194,7 @@ class EventForm(FlaskForm):
     def validate_capacity_max(self, field):
         if field.data and self.capacity_min.data:
             if field.data < self.capacity_min.data:
-                raise ValidationError('Maximum capacity must be greater than minimum.')
+                raise ValidationError('Please enter a maximum greater than the minimum.')
 
     def validate_lat(self, field):
         if field.data is not None:
@@ -205,3 +205,32 @@ class EventForm(FlaskForm):
         if field.data is not None:
             if field.data < -180 or field.data > 180:
                 raise ValidationError('Longitude must be between -180 and 180.')
+
+    def validate_event_time(self, field):
+        if field.data:
+            from datetime import datetime
+            now = datetime.now()
+            if field.data <= now:
+                raise ValidationError('Please choose a date and time in the future.')
+
+
+class EditProfileForm(FlaskForm):
+    name = SanitizedStringField('Name', validators=[
+        DataRequired(),
+        Length(min=2, max=100)
+    ])
+    bio = SanitizedStringField('Bio', validators=[
+        Optional(),
+        Length(max=500)
+    ])
+    location = SanitizedStringField('Location', validators=[
+        Optional(),
+        Length(max=150)
+    ])
+    interests = SanitizedStringField('Interests (comma separated)', validators=[
+        Optional(),
+        Length(max=255)
+    ])
+    is_profile_public = BooleanField('Public profile')
+    is_history_public = BooleanField('Public history')
+    submit = SubmitField('Save changes')

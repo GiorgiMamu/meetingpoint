@@ -10,7 +10,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
 from app.models import User, Event, Participation, Notification, Bookmark
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
-                       ResetPasswordForm, EventForm, BCRYPT_MAX_PASSWORD_BYTES,
+                       ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_MAX_PASSWORD_BYTES,
                        BCRYPT_MAX_PASSWORD_CHARS, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
@@ -262,7 +262,7 @@ def event_detail(event_id):
             event_id=event_id
         ).first()
 
-    return render_template('events/event_detail.html',
+    return render_template('events/event_details.html',
                            event=event,
                            participants=participants,
                            user_participation=user_participation)
@@ -612,21 +612,25 @@ def profile(user_id):
 @login_required
 def edit_profile():
     """Edit the current user's profile."""
-    if request.method == 'POST':
-        name = sanitize(request.form.get('name', '')).strip()
-        if not name:
-            flash('Name cannot be empty.', 'danger')
-            return render_template('profiles/edit_profile.html', user=current_user)
-        current_user.name = name
-        current_user.bio = sanitize(request.form.get('bio', ''))
-        current_user.location = sanitize(request.form.get('location', ''))
-        current_user.interests = sanitize(request.form.get('interests', ''))
-        current_user.is_profile_public = 'is_profile_public' in request.form
-        current_user.is_history_public = 'is_history_public' in request.form
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.name = form.name.data
+        current_user.bio = form.bio.data
+        current_user.location = form.location.data
+        current_user.interests = form.interests.data
+        current_user.is_profile_public = form.is_profile_public.data
+        current_user.is_history_public = form.is_history_public.data
         db.session.commit()
         flash('Profile updated.', 'success')
         return redirect(url_for('main.profile', user_id=current_user.id))
-    return render_template('profiles/edit_profile.html', user=current_user)
+    elif request.method == 'GET':
+        form.name.data = current_user.name
+        form.bio.data = current_user.bio
+        form.location.data = current_user.location
+        form.interests.data = current_user.interests
+        form.is_profile_public.data = current_user.is_profile_public
+        form.is_history_public.data = current_user.is_history_public
+    return render_template('profiles/edit_profile.html', form=form, user=current_user)
 
 
 # ============================================================

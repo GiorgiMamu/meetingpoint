@@ -79,7 +79,7 @@
                     {% if event and event.photo %}
                         <div class="mt-2 d-flex align-items-center gap-3">
                             <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                                 class="rounded" style="max-height:80px;">
+                                 class="rounded" style="max-height:80px;" alt="Current event photo">
                             <span class="text-muted small">Current photo — upload a new one to replace it.</span>
                         </div>
                     {% endif %}
@@ -190,7 +190,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var now = new Date();
         if (eventTime && eventTime < now) {
             e.preventDefault();
-            alert('Event date and time must be in the future.');
+            var eventTimeField = document.querySelector('[name="event_time"]');
+            eventTimeField.setCustomValidity('Event date and time must be in the future.');
+            eventTimeField.reportValidity();
         }
     });
 });

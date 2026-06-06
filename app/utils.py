@@ -72,7 +72,7 @@ This link expires in 1 hour.
 
 If you did not request this, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Password Reset', body)
+    send_email(user.email, 'MeetingPoint — Password reset', body)
 
 
 

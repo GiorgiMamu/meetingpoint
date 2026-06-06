@@ -6,7 +6,7 @@
         <div class="card p-4">
             {% if user.profile_photo %}
                 <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
-                     class="avatar-img">
+                     class="avatar-img" alt="{{ user.name }}'s profile photo">
             {% else %}
                 <div class="avatar-circle">
                     {{ user.name.strip()[0].upper() if user.name and user.name.strip() else '?' }}
@@ -40,7 +40,7 @@
     </div>
 
     <div class="col-md-8">
-        <h5 class="section-title">Hosted Events</h5>
+        <h5 class="section-title">Hosted events</h5>
         {% if hosted_events %}
             <div class="list-group mb-4">
                 {% for event in hosted_events %}
@@ -58,7 +58,7 @@
         {% endif %}
 
         {% if user.is_history_public or (current_user.is_authenticated and current_user.id == user.id) %}
-            <h5 class="section-title">Event History</h5>
+            <h5 class="section-title">Event history</h5>
             {% if history_events %}
                 <div class="list-group">
                     {% for event in history_events[:5] %}

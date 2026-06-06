@@ -47,7 +47,7 @@
             </form>
             <hr class="my-3">
             <p class="text-center text-muted small mb-0">
-                Already have an account? <a href="{{ url_for('main.login') }}">Log In</a>
+                Already have an account? <a href="{{ url_for('main.login') }}">Log in</a>
             </p>
         </div>
     </div>
@@ -56,16 +56,37 @@
 
 {% block scripts %}
 <script>
-    document.getElementById('register-form').addEventListener('submit', function(e) {
-        const pw = document.getElementById('password');
-        const cpw = document.getElementById('confirm_password');
-        if (pw && cpw && pw.value !== cpw.value) {
-            e.preventDefault();
-            cpw.setCustomValidity('Passwords do not match.');
-            cpw.reportValidity();
-        } else if (cpw) {
-            cpw.setCustomValidity('');
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('register-form');
+        const pw = document.querySelector('[name="password"]');
+        const cpw = document.querySelector('[name="confirm_password"]');
+
+        if (cpw && pw) {
+            cpw.addEventListener('input', function() {
+                cpw.setCustomValidity('');
+                    cpw.setCustomValidity('Passwords do not match.');
+                if (pw.value && cpw.value && pw.value !== cpw.value) {
+                    cpw.setCustomValidity('Please make sure the passwords match.');
+                }
+            });
         }
+
+        form.addEventListener('submit', function(e) {
+            if (cpw) {
+                cpw.setCustomValidity('');
+            }
+
+            if (pw && cpw && pw.value.trim() === '' && cpw.value.trim() === '') {
+                return;
+            }
+            
+            if (pw && cpw && pw.value !== cpw.value) {
+                e.preventDefault();
+                cpw.setCustomValidity('Passwords do not match.');
+                cpw.setCustomValidity('Please make sure the passwords match.');
+                cpw.reportValidity();
+            }
+        });
     });
 </script>
 {% endblock %}

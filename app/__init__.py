@@ -53,6 +53,25 @@ def create_app(config_name='default'):
 
     from app import models
 
+    # Context processor to make category labels available to all templates
+    @app.context_processor
+    def inject_category_labels():
+        category_labels = {
+            'social': 'Social',
+            'sports': 'Sports',
+            'arts and culture': 'Arts & Culture',
+            'music': 'Music',
+            'food and drinks': 'Food & Drinks',
+            'outdoors': 'Outdoors',
+            'games': 'Games',
+            'education': 'Education',
+            'technology': 'Technology',
+            'wellness and health': 'Wellness & Health',
+            'travel': 'Travel',
+            'other': 'Other'
+        }
+        return dict(category_labels=category_labels)
+
     # Register blueprints
     from app.routes import main
     app.register_blueprint(main)

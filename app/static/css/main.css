@@ -481,6 +481,53 @@ footer small { color: var(--moss-light); }
 
 .empty-state i { font-size: 3rem; margin-bottom: 1rem; color: var(--moss-light); }
 
+/* ── Gradient placeholder (for missing event photos) ── */
+.gradient-placeholder {
+  height: 190px;
+  background: linear-gradient(135deg, var(--forest-dark), var(--sky-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+}
+
+.gradient-placeholder-icon {
+  font-size: 3rem;
+}
+
+/* ── Avatar with initials ── */
+.avatar-initials-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--charcoal-light);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ── Large icon for empty states ── */
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Progress bar color variants ── */
+.progress-critical {
+  background-color: var(--rose-dark) !important;
+}
+
+.progress-warning {
+  background-color: var(--sand-dark) !important;
+}
+
+.progress-safe {
+  background-color: var(--forest-light) !important;
+}
+
 /* ── Responsive tweaks ── */
 @media (max-width: 768px) {
   .hero h1 { font-size: 2rem; }
