@@ -110,10 +110,16 @@
             banner.style.display = 'flex';
         }
 
-        document.getElementById('cookie-accept-btn').addEventListener('click', function () {
-            document.cookie = "cookie_consent=true;path=/;max-age=31536000";
-            banner.style.display = 'none';
-        });
+        var acceptBtn = banner.querySelector('#cookie-accept-btn');
+        if (acceptBtn) {
+            acceptBtn.addEventListener('click', function () {
+                try {
+                    document.cookie = "cookie_consent=true;path=/;max-age=31536000"; // 1 year
+                } catch (e) { }
+
+                if (banner.parentNode) banner.parentNode.removeChild(banner);
+            });
+        }
     });
 </script>
 {% block scripts %}{% endblock %}

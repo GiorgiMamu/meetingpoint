@@ -1,8 +1,9 @@
 import pytest
 from app import db, bcrypt
-from app.models import User, Event, Participation
+from app.models import User, Event, Bookmark
 from datetime import datetime, timedelta
 import io
+import uuid
 from PIL import Image
 
 def create_user(app, email='host@example.com', password='password123', name='Host User'):
@@ -21,7 +22,7 @@ def login(client, email='host@example.com', password='password123'):
 
 
 def create_event_data(future_minutes=60):
-    future_time = (datetime.utcnow() + timedelta(minutes=future_minutes))
+    future_time = (datetime.now() + timedelta(minutes=future_minutes))
     return {
         'title': 'Test Event',
         'description': 'A test event',
@@ -32,6 +33,7 @@ def create_event_data(future_minutes=60):
         'capacity_min': '2',
         'capacity_max': '10',
         'price': '0',
+        'currency': 'GEL',
         'approval_mode': 'automatic',
         'is_public': 'y',
         'participant_list_visible': 'y'
@@ -111,6 +113,35 @@ def test_delete_event(client, app):
     assert response.status_code == 200
     with app.app_context():
         assert Event.query.count() == 0
+
+
+def test_delete_event_removes_bookmarks(client, app):
+    host_email = f'host-{uuid.uuid4().hex}@example.com'
+    guest_email = f'guest-{uuid.uuid4().hex}@example.com'
+    host_id = create_user(app, email=host_email)
+    guest_id = create_user(app, email=guest_email, name='Guest User')
+    login(client, email=host_email)
+
+    with app.app_context():
+        event = Event(
+            host_id=host_id,
+            title='Bookmarked Event',
+            event_time=datetime.utcnow() + timedelta(hours=1)
+        )
+        db.session.add(event)
+        db.session.commit()
+        bookmark = Bookmark(user_id=guest_id, event_id=event.id)
+        db.session.add(bookmark)
+        db.session.commit()
+        assert Bookmark.query.count() == 1
+        event_id = event.id
+
+    response = client.post(f'/events/{event_id}/delete', follow_redirects=True)
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert Event.query.count() == 0
+        assert Bookmark.query.count() == 0
 
 
 # --- Discover / Search ---

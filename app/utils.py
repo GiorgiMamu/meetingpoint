@@ -66,11 +66,11 @@ def send_password_reset_email(user):
     body = f"""Hi {user.name},
 
 You requested a password reset. Click the link below:
-{reset_url}
+{reset_url} 
 
 This link expires in 1 hour.
 
-If you did not request this, ignore this email.
+If you did not request a password reset, ignore this email.
 """
     send_email(user.email, 'MeetingPoint — Password reset', body)
 

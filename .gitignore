@@ -11,3 +11,4 @@ logs/
 tests/test.db
 instance/test.db
 **/uploads
+/AGENTS.MD

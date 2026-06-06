@@ -18,17 +18,22 @@
                 <p class="text-muted small mb-1">📍 {{ user.location }}</p>
             {% endif %}
             {% if user.bio %}
-                <p class="mt-2 small">{{ user.bio }}</p>
+                <p class="mt-2 mb-1 small">{{ user.bio }}</p>
             {% endif %}
             {% if user.interests %}
-                <div class="mt-2 d-flex flex-wrap justify-content-center gap-1">
+            <div class="mt-1">
+                <h6 class="text-muted mb-1">Interests</h6>
+
+                <div class="d-flex flex-wrap justify-content-center gap-1">
                     {% for interest in user.interests.split(',') %}
-                        <span class="badge bg-secondary" style="max-width:150px; white-space:normal; word-break:break-word; text-align:center;">
+                        <span class="badge bg-secondary"
+                              style="max-width:150px; white-space:normal; word-break:break-word; text-align:center;">
                             {{ interest.strip() }}
                         </span>
                     {% endfor %}
                 </div>
-            {% endif %}
+            </div>
+        {% endif %}
 
             {% if current_user.is_authenticated and current_user.id == user.id %}
                 <a href="{{ url_for('main.edit_profile') }}"

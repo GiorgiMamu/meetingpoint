@@ -330,6 +330,7 @@ def delete_event(event_id):
     delete_event_photo(event.photo)
 
     Participation.query.filter_by(event_id=event_id).delete()
+    Bookmark.query.filter_by(event_id=event_id).delete()
     Notification.query.filter_by(related_event_id=event_id).delete()
     db.session.delete(event)
     db.session.commit()

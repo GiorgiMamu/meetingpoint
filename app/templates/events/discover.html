@@ -43,20 +43,22 @@
             </div>
         </div>
 
+
+
         <!-- Advanced filters -->
         <div class="row g-2">
             <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Mood tag</label>
+                <label class="form-label small fw-semibold mb-1">Mood tag(s)</label>
                 <input type="text" name="mood" class="form-control"
-                       placeholder="e.g. chill" value="{{ mood }}">
+                       placeholder="e.g. adventurous" value="{{ mood }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Min group size</label>
+                <label class="form-label small fw-semibold mb-1">Min participants</label>
                 <input type="number" name="size_min" class="form-control"
                        placeholder="e.g. 5" min="1" value="{{ size_min }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Max group size</label>
+                <label class="form-label small fw-semibold mb-1">Max participants</label>
                 <input type="number" name="size_max" class="form-control"
                        placeholder="e.g. 20" min="1" value="{{ size_max }}">
             </div>
@@ -71,7 +73,7 @@
                     <input type="checkbox" name="free_only" value="1"
                            class="form-check-input" id="free_only"
                            {% if free_only %}checked{% endif %}>
-                    <label class="form-check-label" for="free_only">Free only</label>
+                    <label class="form-check-label" for="free_only">Free</label>
                 </div>
             </div>
             <div class="col-md-2 d-flex align-items-end">
@@ -81,10 +83,13 @@
 
         <!-- Location radius filter -->
         <div class="row g-2 mt-1 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold mb-1">Search near location</label>
+            <div class="col-md-3 position-relative">
+                <label class="form-label small fw-semibold mb-1">Enter a location</label>
                 <input type="text" id="radius-location-input" class="form-control"
                        placeholder="Type a location...">
+                <div id="radius-location-error" class="alert alert-danger py-1 px-2 position-absolute"
+                     style="display:none; left:0; right:0; top:100%; margin-top:0.5rem; z-index:5; font-size:0.9rem; opacity:1; transition: opacity .3s ease;">
+                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Radius (km)</label>
@@ -94,8 +99,7 @@
             <input type="hidden" name="center_lat" id="center_lat" value="{{ center_lat }}">
             <input type="hidden" name="center_lng" id="center_lng" value="{{ center_lng }}">
             <div class="col-md-2">
-                <button type="button" class="btn btn-outline-primary w-100"
-                        onclick="geocodeRadiusLocation()">Set location</button>
+                <button type="button" id="set-location-btn" class="btn btn-outline-primary w-100">Apply location</button>
             </div>
             {% if center_lat and center_lng %}
             <div class="col-md-3">
@@ -285,30 +289,67 @@ document.addEventListener('DOMContentLoaded', function() {
             priceMaxField.disabled = this.checked;
         });
     }
+
+    var setLocationBtn = document.getElementById('set-location-btn');
+    if (setLocationBtn) {
+        setLocationBtn.addEventListener('click', function() {
+            geocodeRadiusLocation();
+        });
+    }
 });
 
 // ── Radius location geocoding ──
 function geocodeRadiusLocation() {
     var input = document.getElementById('radius-location-input').value.trim();
-    if (!input) { alert('Please enter a location.'); return; }
+    var errEl = document.getElementById('radius-location-error');
+    function showLocationError(msg) {
+        if (!errEl) return;
+        if (errEl._hideTimeout) { clearTimeout(errEl._hideTimeout); errEl._hideTimeout = null; }
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+        errEl.style.opacity = '1';
 
-    var radiusKm = document.querySelector('[name="radius_km"]').value;
-    if (!radiusKm) {
+        errEl._hideTimeout = setTimeout(function() {
+            errEl.style.opacity = '0';
+
+            setTimeout(function() { errEl.style.display = 'none'; }, 350);
+            errEl._hideTimeout = null;
+        }, 4000);
+    }
+
+    if (!input) {
+        showLocationError('Please enter a location.');
+        return;
+    }
+
+    var radiusKmRaw = document.querySelector('[name="radius_km"]').value;
+    var radiusKm = parseFloat(radiusKmRaw);
+    if (!radiusKmRaw || isNaN(radiusKm)) {
         document.querySelector('[name="radius_km"]').value = '10';
+        radiusKm = 10;
+    }
+    if (radiusKm < 1) {
+        showLocationError('Please enter a valid radius (minimum 1 km).');
+        return;
     }
 
     fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(input))
         .then(function(r) { return r.json(); })
         .then(function(data) {
+            var errEl = document.getElementById('radius-location-error');
             if (data && data.length > 0) {
+                if (errEl) { if (errEl._hideTimeout) { clearTimeout(errEl._hideTimeout); errEl._hideTimeout = null; } errEl.style.opacity = '0'; setTimeout(function(){ errEl.style.display='none'; errEl.textContent=''; }, 200); }
                 document.getElementById('center_lat').value = data[0].lat;
                 document.getElementById('center_lng').value = data[0].lon;
                 document.getElementById('discover-form').submit();
             } else {
-                alert('Location not found. Try a different search.');
+                if (errEl) { showLocationError('Location not found. Try a different search.'); }
             }
         })
-        .catch(function() { alert('Geocoding failed. Check your connection.'); });
+        .catch(function() {
+            var errEl = document.getElementById('radius-location-error');
+            if (errEl) { showLocationError('Geocoding failed. Check your connection.'); }
+        });
 }
 </script>
 {% endblock %}

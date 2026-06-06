@@ -79,7 +79,13 @@ class Event(db.Model):
 
     participations = db.relationship('Participation', backref='event', lazy=True)
     messages = db.relationship('Message', backref='event', lazy=True)
-    bookmarks = db.relationship('Bookmark', backref='event', lazy=True)
+    bookmarks = db.relationship(
+        'Bookmark',
+        backref='event',
+        lazy=True,
+        cascade='all, delete-orphan',
+        passive_deletes=True
+    )
     notifications = db.relationship('Notification', backref='related_event',
                                     lazy=True, foreign_keys='Notification.related_event_id')
 
@@ -97,7 +103,11 @@ class Participation(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey('events.id', ondelete='CASCADE'),
+        nullable=False
+    )
     status = db.Column(db.String(20), default='pending')
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
