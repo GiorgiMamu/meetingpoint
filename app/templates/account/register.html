@@ -23,7 +23,7 @@
                     {% endfor %}
                 </div>
                 {% set confirm_placeholder = "Repeat password" %}
-                {% include "_password_fields.html" %}
+                {% include "shared/_password_fields.html" %}
                 <div class="mb-4 form-check">
                     <input type="checkbox" class="form-check-input" id="terms_agree" required>
                     <label class="form-check-label" for="terms_agree">
@@ -44,6 +44,6 @@
 
 {% block scripts %}
 <script>
-{% include "_password_validation.js" %}
+{% include "shared/js/_password_validation.js" %}
 </script>
 {% endblock %}

@@ -42,7 +42,7 @@
                             <li><a class="dropdown-item" href="#">Settings</a></li>
                             {% if current_user.is_admin() %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#">Admin Panel</a></li>
+                            <li><a class="dropdown-item" href="#">Admin panel</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Log out</a></li>
@@ -77,7 +77,7 @@
 </div>
 
 <!-- Cookie consent banner -->
-<div id="cookie-banner" class="fixed-bottom bg-dark text-white p-3 d-flex justify-content-between align-items-center"
+<div id="cookie-banner" class="fixed-bottom bg-dark text-white p-3 justify-content-between align-items-center"
      style="display:none;">
     <span>We use cookies to keep you logged in and remember your preferences. By using MeetingPoint you agree to our
         <a href="{{ url_for('main.privacy') }}" class="text-warning">Privacy Policy</a> and
@@ -102,9 +102,18 @@
         var banner = document.getElementById('cookie-banner');
         if (!banner) return;
 
-        var accepted = document.cookie.split(';').some(function(c) {
-            return c.trim().startsWith('cookie_consent=true');
-        });
+        function hasConsentCookie() {
+            return document.cookie.split(';').some(function(c) {
+                return c.trim().startsWith('cookie_consent=true');
+            });
+        }
+
+        function hasConsentLocal() {
+            try { return window.localStorage && localStorage.getItem('cookie_consent') === 'true'; }
+            catch (e) { return false; }
+        }
+
+        var accepted = hasConsentCookie() || hasConsentLocal();
 
         if (!accepted) {
             banner.style.display = 'flex';
@@ -114,8 +123,11 @@
         if (acceptBtn) {
             acceptBtn.addEventListener('click', function () {
                 try {
-                    document.cookie = "cookie_consent=true;path=/;max-age=31536000"; // 1 year
+                    var secure = (window.location && window.location.protocol === 'https:') ? ';Secure' : '';
+                    document.cookie = "cookie_consent=true;path=/;max-age=31536000;SameSite=Lax" + secure; // 1 year
                 } catch (e) { }
+
+                try { localStorage.setItem('cookie_consent', 'true'); } catch (e) { }
 
                 if (banner.parentNode) banner.parentNode.removeChild(banner);
             });

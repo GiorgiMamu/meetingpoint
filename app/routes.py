@@ -55,7 +55,7 @@ def register():
             msg = BCRYPT_PASSWORD_TOO_LONG_MESSAGE
             form.password.errors.append(msg)
             flash(msg, 'danger')
-            return render_template('register.html', form=form)
+            return render_template('account/register.html', form=form)
         user = User(name=name, email=email,
                     password_hash=hashed_pw, is_active=False)
         db.session.add(user)
@@ -64,7 +64,7 @@ def register():
         logger.info(f'New registration: {user.email}')
         flash('Account created. Please check your email to confirm your address.', 'info')
         return redirect(url_for('main.login'))
-    return render_template('register.html', form=form)
+    return render_template('account/register.html', form=form)
 
 
 @main.route('/confirm/<token>')
@@ -103,7 +103,7 @@ def login():
         except ValueError as exc:
             logger.warning('Login rejected password due to bcrypt constraints: %s', exc)
             form.password.errors.append(BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
-            return render_template('login.html', form=form)
+            return render_template('account/login.html', form=form)
 
         if password_ok:
             if not user.is_active:
@@ -116,7 +116,7 @@ def login():
         else:
             logger.warning(f'Failed login attempt for: {form.email.data}')
             flash('Invalid email or password.', 'danger')
-    return render_template('login.html', form=form)
+    return render_template('account/login.html', form=form)
 
 
 @main.route('/logout')
@@ -145,7 +145,7 @@ def request_password_reset():
             logger.info(f'Password reset requested: {user.email}')
         flash('If the given email is registered, you will receive a password reset link.', 'info')
         return redirect(url_for('main.login'))
-    return render_template('request_reset.html', form=form)
+    return render_template('account/request_reset.html', form=form)
 
 
 @main.route('/reset-password/<token>', methods=['GET', 'POST'])
@@ -170,7 +170,7 @@ def reset_password(token):
         # Check new password is not same as current
         if bcrypt.check_password_hash(user.password_hash, form.password.data):
             flash('New password cannot be the same as your current password.', 'danger')
-            return render_template('reset_password.html', form=form)
+            return render_template('account/reset_password.html', form=form)
         try:
             user.password_hash = bcrypt.generate_password_hash(
                 form.password.data).decode('utf-8')
@@ -179,13 +179,13 @@ def reset_password(token):
             msg = BCRYPT_PASSWORD_TOO_LONG_MESSAGE
             form.password.errors.append(msg)
             flash(msg, 'danger')
-            return render_template('reset_password.html', form=form)
+            return render_template('account/reset_password.html', form=form)
         user.password_reset_token = None  # invalidate token after use
         db.session.commit()
         logger.info(f'Password reset completed: {user.email}')
         flash('Password updated. You can now log in.', 'success')
         return redirect(url_for('main.login'))
-    return render_template('reset_password.html', form=form)
+    return render_template('account/reset_password.html', form=form)
 
 
 # ============================================================
@@ -236,7 +236,7 @@ def create_event():
         logger.info(f'Event created: {event.id} by user {current_user.id}')
         flash('Event created successfully!', 'success')
         return redirect(url_for('main.event_detail', event_id=event.id))
-    return render_template('events/create_event.html', form=form, title='Create an event')
+    return render_template('events/create_event.html', form=form, title='Host an event')
 
 
 @main.route('/events/<int:event_id>')
@@ -641,13 +641,13 @@ def edit_profile():
 @main.route('/privacy')
 def privacy():
     """Privacy policy page."""
-    return render_template('privacy.html')
+    return render_template('legal/privacy.html')
 
 
 @main.route('/terms')
 def terms():
     """Terms of service page."""
-    return render_template('terms.html')
+    return render_template('legal/terms.html')
 
 
 # ============================================================

@@ -21,7 +21,8 @@ BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
 
 def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
 
-    def _validator(field):
+    # must pass 2 parameters
+    def _validator(form, field):
         if not field.data:
             return
         try:
@@ -189,7 +190,7 @@ class EventForm(FlaskForm):
         ('manual', 'Manual — you approve each participant')
     ])
     participant_list_visible = BooleanField('Show participant list to others', default=True)
-    submit = SubmitField('Save Event')
+    submit = SubmitField('Save event')
 
     def validate_capacity_max(self, field):
         if field.data and self.capacity_min.data:
