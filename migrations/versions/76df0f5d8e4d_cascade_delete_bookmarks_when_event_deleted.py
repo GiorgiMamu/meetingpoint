@@ -17,8 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
+    inspector = sa.inspect(op.get_bind())
     foreign_keys = inspector.get_foreign_keys('bookmarks')
     event_fk_name = next(
         (
