@@ -15,7 +15,7 @@ from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails,
-                       geocode_location, filter_events_by_radius)
+                       geocode_location, filter_events_by_radius, convert_to_gel)
 from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from datetime import datetime
 import logging
@@ -390,6 +390,7 @@ def discover():
     size_min = request.args.get('size_min', '', type=str)
     size_max = request.args.get('size_max', '', type=str)
     price_max = request.args.get('price_max', '', type=str)
+    price_currency = request.args.get('price_currency', 'GEL')
     free_only = request.args.get('free_only', '')
     radius_km = request.args.get('radius_km', '', type=str)
     center_lat = request.args.get('center_lat', '', type=str)
@@ -437,7 +438,9 @@ def discover():
         query = query.filter(db.or_(Event.price == 0.0, Event.price.is_(None)))
     elif price_max:
         try:
-            query = query.filter(Event.price <= float(price_max))
+            price_max_float = float(price_max)
+            price_max_gel = convert_to_gel(price_max_float, price_currency)
+            query = query.filter(Event.price <= price_max_gel)
         except ValueError:
             pass
     if size_min:
@@ -508,6 +511,7 @@ def discover():
                            size_min=size_min,
                            size_max=size_max,
                            price_max=price_max,
+                           price_currency=price_currency,
                            free_only=free_only,
                            radius_km=radius_km,
                            center_lat=center_lat,

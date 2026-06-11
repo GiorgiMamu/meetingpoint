@@ -64,9 +64,16 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Max price</label>
-                <input type="number" name="price_max" class="form-control"
-                       placeholder="e.g. 10" min="0" step="0.01"
-                       value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
+                <div class="input-group">
+                    <input type="number" name="price_max" class="form-control"
+                        placeholder="e.g. 10" min="0" step="0.01"
+                        value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
+                    <select name="price_currency" class="form-select" style="max-width:80px;" {% if free_only %}disabled{% endif %}>
+                        {% for code in ['GEL','USD','EUR','GBP','TRY','RUB'] %}
+                            <option value="{{ code }}" {% if price_currency == code %}selected{% endif %}>{{ code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <div class="form-check mb-2">
@@ -117,6 +124,9 @@
 <div class="card mb-4">
     <div class="card-body p-0">
         <div id="map" style="height: 380px; border-radius: var(--radius);"></div>
+        <div class="text-muted small mt-1 px-2 pb-2">
+            💡 Click anywhere on the map to search events near that location by radius.
+        </div>
     </div>
 </div>
 
@@ -172,7 +182,7 @@
                     <a class="page-link" href="{{ url_for('main.discover', page=prev_num,
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
-                       price_max=price_max, free_only=free_only, radius_km=radius_km,
+                       price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
                        center_lat=center_lat, center_lng=center_lng) }}">← Previous</a>
                 </li>
             {% endif %}
@@ -184,7 +194,7 @@
                     <a class="page-link" href="{{ url_for('main.discover', page=next_num,
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
-                       price_max=price_max, free_only=free_only, radius_km=radius_km,
+                       price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
                        center_lat=center_lat, center_lng=center_lng) }}">Next →</a>
                 </li>
             {% endif %}
@@ -249,6 +259,44 @@ events.forEach(function(e) {
 });
 
 map.addLayer(markers);
+// Click on map to set radius center
+
+var radiusCenterMarker = null;
+{% if center_lat and center_lng %}
+radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], {
+    icon: L.divIcon({
+        className: '',
+        html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+    })
+}).addTo(map);
+{% endif %}
+
+map.on('click', function(e) {
+    var lat = e.latlng.lat.toFixed(6);
+    var lng = e.latlng.lng.toFixed(6);
+
+    document.getElementById('center_lat').value = lat;
+    document.getElementById('center_lng').value = lng;
+
+    if (radiusCenterMarker) { map.removeLayer(radiusCenterMarker); }
+    radiusCenterMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+            className: '',
+            html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        })
+    }).addTo(map);
+
+    var radiusKm = parseFloat(document.querySelector('[name="radius_km"]').value);
+    if (!radiusKm || isNaN(radiusKm)) {
+        document.querySelector('[name="radius_km"]').value = '10';
+    }
+
+    document.getElementById('discover-form').submit();
+});
 
 // Fit map to markers if any exist
 {% if center_lat and center_lng %}
@@ -287,6 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (freeOnlyCheckbox && priceMaxField) {
         freeOnlyCheckbox.addEventListener('change', function() {
             priceMaxField.disabled = this.checked;
+            var currencySelect = document.querySelector('[name="price_currency"]');
+            if (currencySelect) currencySelect.disabled = this.checked;
         });
     }
 

@@ -119,7 +119,10 @@
                     </span>
                 </div>
                 <div class="progress mb-1" style="height:6px; border-radius:6px; background:#e9ecef;">
-                    <div class="progress-bar bg-primary" role="progressbar" style="width: 50%; border-radius: 6px;"></div>
+                    <div class="progress-bar" role="progressbar"
+                        style="width:{{ fill_percent }}%; border-radius:6px;
+                            background-color: {% if fill_percent >= 90 %}var(--rose-dark){% elif fill_percent >= 60 %}var(--sand-dark){% else %}var(--forest-light){% endif %};">
+                    </div>
                 </div>
                 <div class="d-flex justify-content-between">
                     <small class="text-muted">{{ fill_percent }}% full</small>

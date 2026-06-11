@@ -10,6 +10,8 @@ from flask import current_app
 import math
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+import time
+import requests
 
 def sanitize(value):
     if value is None:
@@ -172,3 +174,57 @@ def filter_events_by_radius(events, center_lat, center_lng, radius_km):
 
 
 
+
+
+_exchange_cache = {'rates': {}, 'timestamp': 0}
+_CACHE_TTL = 3600  # 1 hour
+
+def get_exchange_rates():
+    """
+    Fetch exchange rates from frankfurter.app with 1-hour caching.
+    Returns dict of currency -> rate relative to GEL.
+    Falls back to hardcoded rates if API is unavailable.
+    """
+    now = time.time()
+    if _exchange_cache['rates'] and (now - _exchange_cache['timestamp']) < _CACHE_TTL:
+        return _exchange_cache['rates']
+
+    fallback_rates = {
+        'GEL': 1.0,
+        'USD': 2.75,
+        'EUR': 2.95,
+        'GBP': 3.45,
+        'TRY': 0.085,
+        'RUB': 0.030,
+    }
+
+    try:
+        resp = requests.get(
+            'https://api.frankfurter.app/latest',
+            params={'base': 'GEL', 'symbols': 'USD,EUR,GBP,TRY,RUB'},
+            timeout=3
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            rates = {'GEL': 1.0}
+            for currency, rate in data.get('rates', {}).items():
+                # frankfurter gives rate of X per 1 GEL
+                # we need: how many GEL per 1 X = 1/rate
+                rates[currency] = round(1.0 / rate, 6)
+            _exchange_cache['rates'] = rates
+            _exchange_cache['timestamp'] = now
+            return rates
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f'Exchange rate fetch failed: {e}')
+
+    return fallback_rates
+
+
+def convert_to_gel(amount, from_currency):
+    """Convert an amount from the given currency to GEL."""
+    if from_currency == 'GEL':
+        return amount
+    rates = get_exchange_rates()
+    rate = rates.get(from_currency.upper(), 1.0)
+    return amount * rate
