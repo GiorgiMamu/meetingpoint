@@ -8,7 +8,7 @@ from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort, current_app)
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
-from app.models import User, Event, Participation, Notification, Bookmark
+from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
                        ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_MAX_PASSWORD_BYTES,
                        BCRYPT_MAX_PASSWORD_CHARS, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
@@ -756,3 +756,394 @@ def not_found(e):
 def server_error(e):
     logger.error(f'Server error: {e}')
     return render_template('errors/500.html'), 500
+
+
+
+# ============================================================
+# FOLLOW / UNFOLLOW
+# ============================================================
+
+@main.route('/users/<int:user_id>/follow', methods=['POST'])
+@login_required
+@active_required
+def follow_user(user_id):
+    """Follow or unfollow a user."""
+    if user_id == current_user.id:
+        flash('You cannot follow yourself.', 'danger')
+        return redirect(url_for('main.profile', user_id=user_id))
+
+    user = User.query.get_or_404(user_id)
+    existing = Follow.query.filter_by(
+        follower_id=current_user.id,
+        followed_id=user_id
+    ).first()
+
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        flash(f'You unfollowed {user.name}.', 'info')
+        logger.info(f'Unfollow: {current_user.id} -> {user_id}')
+    else:
+        follow = Follow(follower_id=current_user.id, followed_id=user_id)
+        db.session.add(follow)
+
+        notification = Notification(
+            user_id=user_id,
+            type='follow',
+            message=f'{current_user.name} started following you.',
+            related_event_id=None
+        )
+        db.session.add(notification)
+        db.session.commit()
+        flash(f'You are now following {user.name}.', 'success')
+        logger.info(f'Follow: {current_user.id} -> {user_id}')
+
+    return redirect(request.referrer or url_for('main.profile', user_id=user_id))
+
+
+# ============================================================
+# JOIN / LEAVE EVENT
+# ============================================================
+
+@main.route('/events/<int:event_id>/join', methods=['POST'])
+@login_required
+@active_required
+@not_blocked_required
+def join_event(event_id):
+    """Join a public event."""
+    event = Event.query.get_or_404(event_id)
+
+    if event.is_cancelled:
+        flash('This event has been cancelled.', 'danger')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    if not event.is_public:
+        abort(403)
+
+    if event.host_id == current_user.id:
+        flash('You are the host of this event.', 'info')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    existing = Participation.query.filter_by(
+        user_id=current_user.id, event_id=event_id
+    ).first()
+
+    if existing:
+        flash('You have already joined or requested to join this event.', 'info')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    if event.capacity_max:
+        approved_count = Participation.query.filter_by(
+            event_id=event_id, status='approved'
+        ).count()
+        if approved_count >= event.capacity_max:
+            flash('This event is full.', 'danger')
+            return redirect(url_for('main.event_detail', event_id=event_id))
+
+    if event.approval_mode == 'automatic':
+        status = 'approved'
+        flash('You have joined the event!', 'success')
+        # notify host
+        notification = Notification(
+            user_id=event.host_id,
+            type='join',
+            message=f'{current_user.name} joined your event "{event.title}".',
+            related_event_id=event_id
+        )
+        db.session.add(notification)
+        # send approval email
+        from app.utils import send_email
+        send_email(
+            current_user.email,
+            f'MeetingPoint — You joined: {event.title}',
+            f'Hi {current_user.name},\n\nYou have successfully joined "{event.title}" on {event.event_time.strftime("%B %d, %Y at %H:%M")}.\n\n— MeetingPoint'
+        )
+    else:
+        status = 'pending'
+        flash('Your join request has been sent. The host will review it.', 'info')
+        notification = Notification(
+            user_id=event.host_id,
+            type='join_request',
+            message=f'{current_user.name} requested to join your event "{event.title}".',
+            related_event_id=event_id
+        )
+        db.session.add(notification)
+
+    participation = Participation(
+        user_id=current_user.id,
+        event_id=event_id,
+        status=status
+    )
+    db.session.add(participation)
+    db.session.commit()
+    logger.info(f'Join event: user={current_user.id} event={event_id} status={status}')
+    return redirect(url_for('main.event_detail', event_id=event_id))
+
+
+@main.route('/events/<int:event_id>/leave', methods=['POST'])
+@login_required
+def leave_event(event_id):
+    """Leave an event."""
+    participation = Participation.query.filter_by(
+        user_id=current_user.id, event_id=event_id
+    ).first_or_404()
+
+    event = Event.query.get_or_404(event_id)
+    db.session.delete(participation)
+    db.session.commit()
+
+    notification = Notification(
+        user_id=event.host_id,
+        type='leave',
+        message=f'{current_user.name} left your event "{event.title}".',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    flash('You have left the event.', 'info')
+    logger.info(f'Leave event: user={current_user.id} event={event_id}')
+    return redirect(url_for('main.event_detail', event_id=event_id))
+
+
+# ============================================================
+# PARTICIPANT APPROVAL (HOST)
+# ============================================================
+
+@main.route('/events/<int:event_id>/approve/<int:user_id>', methods=['POST'])
+@login_required
+@host_required
+def approve_participant(event_id, user_id):
+    """Approve a participant's join request."""
+    participation = Participation.query.filter_by(
+        user_id=user_id, event_id=event_id, status='pending'
+    ).first_or_404()
+
+    event = Event.query.get_or_404(event_id)
+    participation.status = 'approved'
+
+    notification = Notification(
+        user_id=user_id,
+        type='approval',
+        message=f'Your request to join "{event.title}" has been approved!',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    from app.utils import send_email
+    user = User.query.get(user_id)
+    send_email(
+        user.email,
+        f'MeetingPoint — Request approved: {event.title}',
+        f'Hi {user.name},\n\nYour request to join "{event.title}" has been approved!\n\nThe event is on {event.event_time.strftime("%B %d, %Y at %H:%M")}.\n\n— MeetingPoint'
+    )
+
+    logger.info(f'Participant approved: user={user_id} event={event_id}')
+    flash(f'Participant approved.', 'success')
+    return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+
+@main.route('/events/<int:event_id>/decline/<int:user_id>', methods=['POST'])
+@login_required
+@host_required
+def decline_participant(event_id, user_id):
+    """Decline a participant's join request."""
+    participation = Participation.query.filter_by(
+        user_id=user_id, event_id=event_id, status='pending'
+    ).first_or_404()
+
+    event = Event.query.get_or_404(event_id)
+    participation.status = 'declined'
+
+    notification = Notification(
+        user_id=user_id,
+        type='declined',
+        message=f'Your request to join "{event.title}" was declined.',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    logger.info(f'Participant declined: user={user_id} event={event_id}')
+    flash('Participant declined.', 'info')
+    return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+
+@main.route('/events/<int:event_id>/remove/<int:user_id>', methods=['POST'])
+@login_required
+@host_required
+def remove_participant(event_id, user_id):
+    """Remove an approved participant from an event."""
+    participation = Participation.query.filter_by(
+        user_id=user_id, event_id=event_id
+    ).first_or_404()
+
+    event = Event.query.get_or_404(event_id)
+    db.session.delete(participation)
+
+    notification = Notification(
+        user_id=user_id,
+        type='removed',
+        message=f'You have been removed from "{event.title}" by the host.',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    logger.info(f'Participant removed: user={user_id} event={event_id}')
+    flash('Participant removed.', 'info')
+    return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+
+# ============================================================
+# INVITATIONS
+# ============================================================
+
+@main.route('/events/<int:event_id>/invite/<int:user_id>', methods=['POST'])
+@login_required
+@host_required
+def invite_user(event_id, user_id):
+    """Invite a user to an event."""
+    event = Event.query.get_or_404(event_id)
+    user = User.query.get_or_404(user_id)
+
+    existing = Notification.query.filter_by(
+        user_id=user_id,
+        type='invitation',
+        related_event_id=event_id
+    ).first()
+
+    if existing:
+        flash(f'{user.name} has already been invited.', 'info')
+        return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+    notification = Notification(
+        user_id=user_id,
+        type='invitation',
+        message=f'You have been invited to "{event.title}" by {current_user.name}.',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    from app.utils import send_email
+    event_url = url_for('main.event_detail', event_id=event_id, _external=True)
+    send_email(
+        user.email,
+        f'MeetingPoint — You\'ve been invited to {event.title}',
+        f'Hi {user.name},\n\n{current_user.name} has invited you to "{event.title}".\n\nView the event: {event_url}\n\n— MeetingPoint'
+    )
+
+    flash(f'{user.name} has been invited.', 'success')
+    logger.info(f'Invitation sent: event={event_id} to user={user_id} by {current_user.id}')
+    return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+
+# ============================================================
+# EVENT SHARING
+# ============================================================
+
+@main.route('/events/<int:event_id>/share')
+def share_event(event_id):
+    """Generate a shareable link for a public event."""
+    event = Event.query.get_or_404(event_id)
+    if not event.is_public:
+        abort(403)
+    share_url = url_for('main.event_detail', event_id=event_id, _external=True)
+    return render_template('events/share_event.html', event=event, share_url=share_url)
+
+
+# ============================================================
+# CHAT PAGE
+# ============================================================
+
+@main.route('/chats')
+@login_required
+def chats():
+    """List all event chats the user is part of (as host or approved participant)."""
+    hosted = Event.query.filter_by(
+        host_id=current_user.id,
+        is_cancelled=False
+    ).all()
+
+    participations = Participation.query.filter_by(
+        user_id=current_user.id,
+        status='approved'
+    ).all()
+    joined = [p.event for p in participations if not p.event.is_cancelled]
+
+    all_events = list({e.id: e for e in hosted + joined}.values())
+    all_events.sort(key=lambda e: e.event_time, reverse=True)
+
+    return render_template('events/chats.html', events=all_events)
+
+
+@main.route('/events/<int:event_id>/chat')
+@login_required
+def event_chat(event_id):
+    """View the chat for a specific event."""
+    event = Event.query.get_or_404(event_id)
+
+    is_host = event.host_id == current_user.id
+    is_participant = Participation.query.filter_by(
+        user_id=current_user.id,
+        event_id=event_id,
+        status='approved'
+    ).first() is not None
+
+    if not (is_host or is_participant):
+        flash('You must be an approved participant to access this chat.', 'danger')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    messages = Message.query.filter_by(event_id=event_id).order_by(
+        Message.timestamp.asc()
+    ).all()
+
+    pending = []
+    if is_host and event.approval_mode == 'manual':
+        pending = Participation.query.filter_by(
+            event_id=event_id, status='pending'
+        ).all()
+
+    approved_participants = Participation.query.filter_by(
+        event_id=event_id, status='approved'
+    ).all()
+
+    return render_template('events/event_chat.html',
+                           event=event,
+                           messages=messages,
+                           pending=pending,
+                           approved_participants=approved_participants,
+                           is_host=is_host)
+
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+@main.route('/notifications')
+@login_required
+def notifications():
+    """Show all notifications for the current user."""
+    user_notifications = Notification.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Notification.created_at.desc()).all()
+
+    unread = [n for n in user_notifications if not n.is_read]
+    for n in unread:
+        n.is_read = True
+    db.session.commit()
+
+    return render_template('notifications.html', notifications=user_notifications)
+
+
+@main.route('/notifications/mark-read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    """Mark all notifications as read."""
+    Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).update({'is_read': True})
+    db.session.commit()
+    return redirect(url_for('main.notifications'))

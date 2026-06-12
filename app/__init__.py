@@ -10,6 +10,7 @@ from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
+from flask_socketio import SocketIO
 from config import config
 
 db = SQLAlchemy()
@@ -18,13 +19,13 @@ bcrypt = Bcrypt()
 csrf = CSRFProtect()
 mail = Mail()
 migrate = Migrate()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "60 per hour"])
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "600 per hour"])
+socketio = SocketIO()
 
 def create_app(config_name='default'):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config[config_name])
 
-    # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
     bcrypt.init_app(app)
@@ -33,14 +34,15 @@ def create_app(config_name='default'):
     if not app.config.get('TESTING'):
         migrate.init_app(app, db)
     limiter.init_app(app)
+    socketio.init_app(app, cors_allowed_origins='*')
+
     login_manager.login_view = 'main.login'
     login_manager.login_message_category = 'info'
 
-    # Set up logging
     if not os.path.exists('logs'):
         os.mkdir('logs')
     file_handler = RotatingFileHandler(
-        app.config['LOG_FILE'], maxBytes=10240, backupCount=5
+        app.config['LOG_FILE'], maxBytes=10240, backupCount=5, delay=True
     )
     file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
@@ -53,7 +55,6 @@ def create_app(config_name='default'):
 
     from app import models
 
-    # Context processor to make category labels available to all templates
     @app.context_processor
     def inject_category_labels():
         category_labels = {
@@ -72,13 +73,19 @@ def create_app(config_name='default'):
         }
         return dict(category_labels=category_labels)
 
-    # Register blueprints
     from app.routes import main
     app.register_blueprint(main)
+
+    from app.socket_events import register_socket_events
+    register_socket_events(socketio)
 
     @app.before_request
     def make_session_permanent():
         from flask import session
         session.permanent = True
+
+    if not app.config.get('TESTING'):
+        from app.scheduler import start_scheduler
+        start_scheduler(app)
 
     return app

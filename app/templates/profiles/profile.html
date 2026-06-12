@@ -40,6 +40,16 @@
                    class="btn btn-outline-primary btn-sm mt-3">✏️ Edit profile</a>
                 <a href="{{ url_for('main.history') }}"
                    class="btn btn-outline-secondary btn-sm mt-2">📋 View full history</a>
+            {% elif current_user.is_authenticated %}
+                {% set is_following = current_user.following.filter_by(followed_id=user.id).first() %}
+                <form method="POST" action="{{ url_for('main.follow_user', user_id=user.id) }}" class="mt-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if is_following %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">Unfollow</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Follow</button>
+                    {% endif %}
+                </form>
             {% endif %}
         </div>
     </div>

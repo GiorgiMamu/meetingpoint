@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Chat — {{ event.title }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+
+    <!-- Chat column -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body pb-0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">{{ event.title }} — chat</h5>
+                    <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+                       class="btn btn-sm btn-outline-secondary">← Event page</a>
+                </div>
+
+                <!-- Messages -->
+                <div id="chat-messages"
+                     style="height:420px; overflow-y:auto; padding:0.5rem 0; border-top:1px solid #eee;">
+                    {% if messages %}
+                        {% for msg in messages %}
+                        <div class="d-flex gap-2 mb-3 {% if msg.user_id == current_user.id %}flex-row-reverse{% endif %}"
+                             id="msg-{{ msg.id }}">
+                            <div class="avatar-initials-sm flex-shrink-0">
+                                {{ msg.author.name.strip()[0].upper() if msg.author.name and msg.author.name.strip() else '?' }}
+                            </div>
+                            <div style="max-width:70%;">
+                                <div class="d-flex align-items-center gap-2 {% if msg.user_id == current_user.id %}flex-row-reverse{% endif %}">
+                                    <span class="small fw-semibold">{{ msg.author.name }}</span>
+                                    <span class="text-muted" style="font-size:0.75rem;">{{ msg.timestamp.strftime('%H:%M') }}</span>
+                                    {% if is_host and msg.user_id != current_user.id %}
+                                        <button class="btn btn-sm p-0 text-muted delete-msg-btn"
+                                                data-msg-id="{{ msg.id }}"
+                                                style="font-size:0.7rem; line-height:1;">✕</button>
+                                    {% endif %}
+                                </div>
+                                <div class="rounded p-2 mt-1"
+                                     style="background: {% if msg.user_id == current_user.id %}var(--forest-dark){% else %}#f0f0f0{% endif %};
+                                            color: {% if msg.user_id == current_user.id %}white{% else %}var(--charcoal-dark){% endif %};">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-4">No messages yet. Say hello!</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Message input -->
+            <div class="card-footer">
+                <div class="d-flex gap-2">
+                    <input type="text" id="msg-input" class="form-control"
+                           placeholder="Type a message..." maxlength="1000"
+                           autocomplete="off">
+                    <button id="send-btn" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+
+        <!-- Pending approval queue (host only, manual events) -->
+        {% if is_host and pending %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="section-title">Pending requests ({{ pending|length }})</h6>
+                {% for p in pending %}
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-initials-sm">
+                            {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                        </div>
+                        <span class="small">{{ p.user.name }}</span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <form method="POST"
+                              action="{{ url_for('main.approve_participant', event_id=event.id, user_id=p.user_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-success">✓</button>
+                        </form>
+                        <form method="POST"
+                              action="{{ url_for('main.decline_participant', event_id=event.id, user_id=p.user_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">✕</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Participants -->
+        <div class="card">
+            <div class="card-body">
+                <h6 class="section-title">Participants ({{ approved_participants|length }})</h6>
+                {% for p in approved_participants %}
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-initials-sm">
+                            {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                        </div>
+                        <a href="{{ url_for('main.profile', user_id=p.user_id) }}"
+                           class="small text-decoration-none text-dark">
+                            {{ p.user.name }}
+                            {% if p.user_id == event.host_id %}
+                                <span class="text-muted">(host)</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                    {% if is_host and p.user_id != current_user.id %}
+                    <form method="POST"
+                          action="{{ url_for('main.remove_participant', event_id=event.id, user_id=p.user_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
+                                onclick="return confirm('Remove {{ p.user.name }} from this event?')"
+                                style="font-size:0.7rem;">Remove</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+var socket = io();
+var eventId = {{ event.id }};
+var currentUserId = {{ current_user.id }};
+var isHost = {{ 'true' if is_host else 'false' }};
+
+socket.emit('join_chat', { event_id: eventId });
+
+// Scroll to bottom on load
+var chatBox = document.getElementById('chat-messages');
+chatBox.scrollTop = chatBox.scrollHeight;
+
+// Send message
+function sendMessage() {
+    var input = document.getElementById('msg-input');
+    var content = input.value.trim();
+    if (!content) return;
+    socket.emit('send_message', { event_id: eventId, content: content });
+    input.value = '';
+}
+
+document.getElementById('send-btn').addEventListener('click', sendMessage);
+document.getElementById('msg-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+// Receive new message
+socket.on('new_message', function(data) {
+    if (data.event_id != eventId) return;
+
+    var isOwn = data.author_id === currentUserId;
+    var div = document.createElement('div');
+    div.className = 'd-flex gap-2 mb-3' + (isOwn ? ' flex-row-reverse' : '');
+    div.id = 'msg-' + data.id;
+
+    var initial = data.author_name ? data.author_name.trim()[0].toUpperCase() : '?';
+    var deleteBtn = (isHost && !isOwn)
+        ? '<button class="btn btn-sm p-0 text-muted delete-msg-btn" data-msg-id="' + data.id + '" style="font-size:0.7rem;">✕</button>'
+        : '';
+
+    div.innerHTML =
+        '<div class="avatar-initials-sm flex-shrink-0">' + initial + '</div>' +
+        '<div style="max-width:70%;">' +
+            '<div class="d-flex align-items-center gap-2' + (isOwn ? ' flex-row-reverse' : '') + '">' +
+                '<span class="small fw-semibold">' + data.author_name + '</span>' +
+                '<span class="text-muted" style="font-size:0.75rem;">' + data.timestamp + '</span>' +
+                deleteBtn +
+            '</div>' +
+            '<div class="rounded p-2 mt-1" style="background:' + (isOwn ? 'var(--forest-dark)' : '#f0f0f0') + '; color:' + (isOwn ? 'white' : 'var(--charcoal-dark)') + ';">' +
+                data.content +
+            '</div>' +
+        '</div>';
+
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Re-attach delete listeners
+    attachDeleteListeners();
+});
+
+// Delete message (host only)
+function attachDeleteListeners() {
+    document.querySelectorAll('.delete-msg-btn').forEach(function(btn) {
+        btn.onclick = function() {
+            var msgId = parseInt(btn.getAttribute('data-msg-id'));
+            socket.emit('delete_message', { message_id: msgId, event_id: eventId });
+        };
+    });
+}
+
+socket.on('message_deleted', function(data) {
+    var el = document.getElementById('msg-' + data.message_id);
+    if (el) el.remove();
+});
+
+attachDeleteListeners();
+
+window.addEventListener('beforeunload', function() {
+    socket.emit('leave_chat', { event_id: eventId });
+});
+</script>
+{% endblock %}
