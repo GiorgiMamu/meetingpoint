@@ -39,16 +39,21 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    sender = current_app.config.get('MAIL_USERNAME')
+    if current_app.config.get('TESTING'):
+        return
+    sender = (current_app.config.get('MAIL_USERNAME') or
+              current_app.config.get('MAIL_DEFAULT_SENDER'))
+    if not sender:
+        import logging
+        logging.getLogger(__name__).warning(f'Email not sent to {to}: no sender configured.')
+        return
     msg = Message(
         subject,
         sender=sender,
         recipients=[to],
         body=body
     )
-    if not current_app.config.get('TESTING'):
-        mail.send(msg)
-    return msg
+    mail.send(msg)
 
 
 def send_verification_email(user):

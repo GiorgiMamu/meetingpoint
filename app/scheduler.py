@@ -16,7 +16,7 @@ def start_scheduler(app):
         scheduler.add_job(
             func=lambda: send_reminders(app),
             trigger='interval',
-            hours=1,
+            minutes=1,
             id='event_reminders',
             replace_existing=True
         )
@@ -36,7 +36,7 @@ def send_reminders(app):
         from app.models import Event, Participation, Notification
         from app.utils import send_email
 
-        now = datetime.utcnow()
+        now = datetime.now()
         window_start = now + timedelta(hours=23)
         window_end = now + timedelta(hours=25)
 
