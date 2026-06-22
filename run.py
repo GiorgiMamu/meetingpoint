@@ -1,5 +1,7 @@
-from app import create_app, socketio
 from dotenv import load_dotenv
+
+from app import create_app, socketio
+
 load_dotenv()
 
 app = create_app('development')

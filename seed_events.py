@@ -1,17 +1,17 @@
 """
-Seed script to create ~20 realistic events across Georgia for users with id 3 and 4.
+Seed script to create ~20 realistic events across Georgia for users with id 3 and 8.
 Usage:
     python seed_events.py          # create events
-    python seed_events.py --reset  # delete existing events for users 3 & 4, then recreate
+    python seed_events.py --reset  # delete existing events for users 3 & 8, then recreate
 """
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from app import create_app, db
 from app.models import Event
 from datetime import datetime, timedelta
-import json
 import sys
 
 app = create_app('development')
@@ -26,7 +26,7 @@ EVENTS = [
         "lat": 42.6597,
         "lng": 44.6370,
         "category": "Sport",
-        "mood_tags": json.dumps(["adventure", "nature", "early-bird"]),
+        "mood_tags": "adventure, nature, early-bird",
         "capacity_min": 4,
         "capacity_max": 20,
         "price": 0.0,
@@ -37,7 +37,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Batumi Beach Volleyball Tournament",
         "description": "Friendly 3v3 beach volleyball tournament on the Black Sea shore. Teams of 3, round-robin format. Prizes for the winning team. Register as a team or we'll pair you with others.",
         "event_time": datetime.utcnow() + timedelta(days=7, hours=10),
@@ -45,7 +45,7 @@ EVENTS = [
         "lat": 41.6415,
         "lng": 41.6419,
         "category": "Sport",
-        "mood_tags": json.dumps(["competitive", "outdoor", "beach"]),
+        "mood_tags": "competitive, outdoor, beach",
         "capacity_min": 12,
         "capacity_max": 48,
         "price": 5.0,
@@ -64,7 +64,7 @@ EVENTS = [
         "lat": 41.9200,
         "lng": 45.4767,
         "category": "Food & Drink",
-        "mood_tags": json.dumps(["cultural", "relaxed", "scenic"]),
+        "mood_tags": "cultural, relaxed, scenic",
         "capacity_min": 6,
         "capacity_max": 18,
         "price": 80.0,
@@ -75,7 +75,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Svaneti Photography Expedition",
         "description": "4-day photography trip through Upper Svaneti — medieval towers, glaciers, and mountain villages. We'll visit Ushguli, one of the highest inhabited villages in Europe. Limited to 8 people for an intimate experience. Accommodation arranged.",
         "event_time": datetime.utcnow() + timedelta(days=14, hours=7),
@@ -83,7 +83,7 @@ EVENTS = [
         "lat": 43.0530,
         "lng": 42.7277,
         "category": "Art",
-        "mood_tags": json.dumps(["adventure", "creative", "scenic"]),
+        "mood_tags": "adventure, creative, scenic",
         "capacity_min": 4,
         "capacity_max": 8,
         "price": 350.0,
@@ -102,7 +102,7 @@ EVENTS = [
         "lat": 41.8361,
         "lng": 43.4003,
         "category": "Wellness",
-        "mood_tags": json.dumps(["relaxing", "nature", "wellness"]),
+        "mood_tags": "relaxing, nature, wellness",
         "capacity_min": 4,
         "capacity_max": 15,
         "price": 40.0,
@@ -113,7 +113,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Sighnaghi Art Residency Weekend",
         "description": "Two days of painting and sketching in the City of Love. We'll work en plein air overlooking the Alazani Valley and Caucasus peaks. Evening polyphonic singing session included. Accommodation in a guesthouse.",
         "event_time": datetime.utcnow() + timedelta(days=11, hours=15),
@@ -121,7 +121,7 @@ EVENTS = [
         "lat": 41.6157,
         "lng": 45.9215,
         "category": "Art",
-        "mood_tags": json.dumps(["creative", "romantic", "cultural"]),
+        "mood_tags": "creative, romantic, cultural",
         "capacity_min": 5,
         "capacity_max": 12,
         "price": 150.0,
@@ -140,7 +140,7 @@ EVENTS = [
         "lat": 42.2679,
         "lng": 42.6956,
         "category": "Education",
-        "mood_tags": json.dumps(["nature", "adventure", "educational"]),
+        "mood_tags": "nature, adventure, educational",
         "capacity_min": 5,
         "capacity_max": 20,
         "price": 55.0,
@@ -151,7 +151,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Batumi Jazz Festival Pre-Party",
         "description": "Warm-up evening ahead of the Batumi Jazz Festival. Local jazz quartet playing on the seafront boulevard. Bring a blanket, grab some churchkhela from the vendors, and enjoy the Black Sea breeze.",
         "event_time": datetime.utcnow() + timedelta(days=3, hours=20),
@@ -159,7 +159,7 @@ EVENTS = [
         "lat": 41.6488,
         "lng": 41.6406,
         "category": "Music",
-        "mood_tags": json.dumps(["festive", "outdoor", "cultural"]),
+        "mood_tags": "festive, outdoor, cultural",
         "capacity_min": 20,
         "capacity_max": 300,
         "price": 0.0,
@@ -178,7 +178,7 @@ EVENTS = [
         "lat": 41.8452,
         "lng": 44.7202,
         "category": "Education",
-        "mood_tags": json.dumps(["cultural", "historical", "scenic"]),
+        "mood_tags": "cultural, historical, scenic",
         "capacity_min": 5,
         "capacity_max": 25,
         "price": 20.0,
@@ -189,7 +189,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Vardzia Cave Monastery Day Trip",
         "description": "Visit the 12th century cave city of Vardzia carved into the volcanic rock of the Erusheti Mountain. Over 600 rooms, a church with original frescoes, and sweeping Mtkvari valley views. Bus departs from Akhaltsikhe.",
         "event_time": datetime.utcnow() + timedelta(days=16, hours=9),
@@ -197,7 +197,7 @@ EVENTS = [
         "lat": 41.3817,
         "lng": 43.2817,
         "category": "Education",
-        "mood_tags": json.dumps(["historical", "adventure", "scenic"]),
+        "mood_tags": "historical, adventure, scenic",
         "capacity_min": 8,
         "capacity_max": 30,
         "price": 35.0,
@@ -216,7 +216,7 @@ EVENTS = [
         "lat": 42.5867,
         "lng": 43.4506,
         "category": "Sport",
-        "mood_tags": json.dumps(["adventure", "adrenaline", "nature"]),
+        "mood_tags": "adventure, adrenaline, nature",
         "capacity_min": 6,
         "capacity_max": 16,
         "price": 70.0,
@@ -227,7 +227,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Tbilisi Rooftop Polyphony Concert",
         "description": "An evening of traditional Georgian polyphonic singing on a rooftop in Sololaki. Three ensembles performing pieces from Kartli, Kakheti, and Svaneti. One of Georgia's UNESCO-recognized treasures performed under the stars.",
         "event_time": datetime.utcnow() + timedelta(days=10, hours=20),
@@ -235,7 +235,7 @@ EVENTS = [
         "lat": 41.6892,
         "lng": 44.8034,
         "category": "Music",
-        "mood_tags": json.dumps(["cultural", "atmospheric", "traditional"]),
+        "mood_tags": "cultural, atmospheric, traditional",
         "capacity_min": 20,
         "capacity_max": 60,
         "price": 35.0,
@@ -254,7 +254,7 @@ EVENTS = [
         "lat": 41.9200,
         "lng": 45.4767,
         "category": "Sport",
-        "mood_tags": json.dumps(["scenic", "active", "nature"]),
+        "mood_tags": "scenic, active, nature",
         "capacity_min": 4,
         "capacity_max": 16,
         "price": 0.0,
@@ -265,7 +265,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Chacha Tasting & Distillery Visit",
         "description": "Tour a family chacha distillery in Kakheti and taste 5 different varieties — grape, mulberry, fig, and more. Learn the distillation process and take home a bottle. Transport from Tbilisi available for 15 GEL extra.",
         "event_time": datetime.utcnow() + timedelta(days=17, hours=14),
@@ -273,7 +273,7 @@ EVENTS = [
         "lat": 41.7467,
         "lng": 45.8078,
         "category": "Food & Drink",
-        "mood_tags": json.dumps(["cultural", "fun", "social"]),
+        "mood_tags": "cultural, fun, social",
         "capacity_min": 6,
         "capacity_max": 20,
         "price": 50.0,
@@ -292,7 +292,7 @@ EVENTS = [
         "lat": 42.4667,
         "lng": 44.4833,
         "category": "Sport",
-        "mood_tags": json.dumps(["adrenaline", "adventure", "scenic"]),
+        "mood_tags": "adrenaline, adventure, scenic",
         "capacity_min": 2,
         "capacity_max": 6,
         "price": 180.0,
@@ -303,7 +303,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Gori Food Market & Stalin Museum Visit",
         "description": "Morning at Gori's lively food market — fresh produce, local cheese, tklapi, and more. Afternoon visit to the Stalin Museum (love it or hate it, it's fascinating). Lunch at a family restaurant between the two. Day trip from Tbilisi.",
         "event_time": datetime.utcnow() + timedelta(days=13, hours=9),
@@ -311,7 +311,7 @@ EVENTS = [
         "lat": 41.9851,
         "lng": 44.1133,
         "category": "Community",
-        "mood_tags": json.dumps(["cultural", "historical", "foodie"]),
+        "mood_tags": "cultural, historical, foodie",
         "capacity_min": 5,
         "capacity_max": 20,
         "price": 25.0,
@@ -330,7 +330,7 @@ EVENTS = [
         "lat": 41.7167,
         "lng": 41.6833,
         "category": "Community",
-        "mood_tags": json.dumps(["relaxed", "nature", "social"]),
+        "mood_tags": "relaxed, nature, social",
         "capacity_min": 5,
         "capacity_max": 30,
         "price": 10.0,
@@ -341,7 +341,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Stargazing Night: Javakheti Plateau",
         "description": "The Javakheti highland plateau has some of the darkest skies in Georgia. We'll drive up after sunset, set up telescopes, and spend 3 hours stargazing with an amateur astronomer guide. Warm clothes essential — it gets cold at 2000m.",
         "event_time": datetime.utcnow() + timedelta(days=20, hours=21),
@@ -349,7 +349,7 @@ EVENTS = [
         "lat": 41.4094,
         "lng": 43.4914,
         "category": "Education",
-        "mood_tags": json.dumps(["peaceful", "nature", "educational"]),
+        "mood_tags": "peaceful, nature, educational",
         "capacity_min": 4,
         "capacity_max": 15,
         "price": 30.0,
@@ -368,7 +368,7 @@ EVENTS = [
         "lat": 42.2833,
         "lng": 45.3167,
         "category": "Sport",
-        "mood_tags": json.dumps(["adventure", "nature", "remote"]),
+        "mood_tags": "adventure, nature, remote",
         "capacity_min": 3,
         "capacity_max": 10,
         "price": 90.0,
@@ -379,7 +379,7 @@ EVENTS = [
         "is_anonymous": False,
     },
     {
-        "host_id": 4,
+        "host_id": 8,
         "title": "Kobuleti Sunset Yoga Retreat",
         "description": "Weekend yoga and meditation retreat on the Black Sea coast. Two days of morning yoga, breathwork, and evening meditation sessions. Vegetarian meals included. Accommodation in a beachside guesthouse. Max 10 participants for an intimate setting.",
         "event_time": datetime.utcnow() + timedelta(days=18, hours=16),
@@ -387,7 +387,7 @@ EVENTS = [
         "lat": 41.8281,
         "lng": 41.7731,
         "category": "Wellness",
-        "mood_tags": json.dumps(["wellness", "peaceful", "beach"]),
+        "mood_tags": "wellness, peaceful, beach",
         "capacity_min": 4,
         "capacity_max": 10,
         "price": 200.0,
@@ -403,9 +403,9 @@ EVENTS = [
 def seed_events(reset=False):
     with app.app_context():
         if reset:
-            deleted = Event.query.filter(Event.host_id.in_([3, 4])).delete(synchronize_session=False)
+            deleted = Event.query.filter(Event.host_id.in_([3, 8])).delete(synchronize_session=False)
             db.session.commit()
-            print(f"Deleted {deleted} existing events for users 3 and 4.")
+            print(f"Deleted {deleted} existing events for users 3 and 8.")
 
         created = 0
         for data in EVENTS:

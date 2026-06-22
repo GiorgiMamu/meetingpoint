@@ -1,8 +1,7 @@
-import pytest
+from datetime import datetime, timedelta
+
 from app import db, bcrypt
 from app.models import User, Event, Bookmark
-from datetime import datetime, timedelta
-import math
 
 
 def create_user(app, email='user@example.com', password='password123', name='Test User'):
@@ -119,9 +118,9 @@ def test_filter_events_by_radius():
             self.title = title
 
     events = [
-        MockEvent(41.6938, 44.8015, 'Near Event'),    # 0km away
+        MockEvent(41.6938, 44.8015, 'Near Event'),  # 0km away
         MockEvent(41.7938, 44.9015, 'Medium Event'),  # ~13km away
-        MockEvent(42.5000, 45.5000, 'Far Event'),     # ~100km away
+        MockEvent(42.5000, 45.5000, 'Far Event'),  # ~100km away
     ]
 
     result = filter_events_by_radius(events, 41.6938, 44.8015, 20)

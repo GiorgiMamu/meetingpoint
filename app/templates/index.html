@@ -6,32 +6,32 @@
     <h1>Find your next adventure</h1>
     <p>Discover casual local events, meet new people, and create gatherings of your own – no fees, no fuss.</p>
     {% if not current_user.is_authenticated %}
-        <a href="{{ url_for('main.register') }}" class="btn btn-warning me-2">Get started</a>
-        <a href="{{ url_for('main.login') }}" class="btn btn-outline-light">Log in</a>
+    <a class="btn btn-warning me-2" href="{{ url_for('main.register') }}">Get started</a>
+    <a class="btn btn-outline-light" href="{{ url_for('main.login') }}">Log in</a>
     {% else %}
-        <a href="{{ url_for('main.discover') }}" class="btn btn-warning me-2">Discover events</a>
-        <a href="{{ url_for('main.create_event') }}" class="btn btn-outline-light">Host an event</a>
+    <a class="btn btn-warning me-2" href="{{ url_for('main.discover') }}">Discover events</a>
+    <a class="btn btn-outline-light" href="{{ url_for('main.create_event') }}">Host an event</a>
     {% endif %}
 </div>
 
 <div class="row text-center g-4 mt-2">
     <div class="col-md-4">
         <div class="card p-4 h-100">
-            <div style="font-size:2.5rem; margin-bottom:0.75rem;" aria-label="Discover events feature">🗓️</div>
+            <div aria-label="Discover events feature" style="font-size:2.5rem; margin-bottom:0.75rem;">🗓️</div>
             <h5>Discover events</h5>
             <p class="text-muted small">Browse public events nearby — filter by category, mood, location, etc.</p>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 h-100">
-            <div style="font-size:2.5rem; margin-bottom:0.75rem;" aria-label="Meet people feature">🤝</div>
+            <div aria-label="Meet people feature" style="font-size:2.5rem; margin-bottom:0.75rem;">🤝</div>
             <h5>Meet people</h5>
             <p class="text-muted small">Join events, chat with participants, build real connections in your city.</p>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 h-100">
-            <div style="font-size:2.5rem; margin-bottom:0.75rem;" aria-label="Host events feature">✨</div>
+            <div aria-label="Host events feature" style="font-size:2.5rem; margin-bottom:0.75rem;">✨</div>
             <h5>Host your own</h5>
             <p class="text-muted small">Create any kind of gathering – a hike, a movie night, a trip. For free.</p>
         </div>

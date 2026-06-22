@@ -2,26 +2,79 @@
 routes.py — All HTTP route handlers for MeetingPoint.
 Organized into sections: general, auth, events, profiles, pages.
 """
+import logging
 import math
+from datetime import datetime
 
 from flask import (Blueprint, render_template, redirect, url_for,
-                   flash, request, abort, current_app)
+                   flash, request, abort)
 from flask_login import login_user, logout_user, login_required, current_user
+
 from app import db, bcrypt, limiter
-from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message
+from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
-                       ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_MAX_PASSWORD_BYTES,
-                       BCRYPT_MAX_PASSWORD_CHARS, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
+                       ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
+from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails,
                        geocode_location, filter_events_by_radius, convert_to_gel)
-from app.decorators import admin_required, host_required, active_required, not_blocked_required
-from datetime import datetime
-import logging
 
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
+
+
+def render_private_profile(user):
+    """Show a friendly private-profile page."""
+    return render_template('errors/profile_private.html', user=user), 403
+
+
+def can_view_profile(user):
+    """Return True if the current user can view the given profile."""
+    if current_user.is_authenticated and current_user.id == user.id:
+        return True
+    if current_user.is_authenticated and current_user.is_admin():
+        return True
+    if user.is_admin():
+        return False
+    return user.is_profile_public
+
+
+def visible_following(user):
+    """Users this profile follows, excluding admin accounts."""
+    return [
+        row.followed for row in user.following.order_by(Follow.created_at.desc()).all()
+        if not row.followed.is_admin()
+    ]
+
+
+def add_invited_participation(event, user):
+    """Upgrade existing pending participation to approved for an invited user."""
+    participation = Participation.query.filter_by(
+        event_id=event.id,
+        user_id=user.id
+    ).first()
+    if participation and participation.status == 'pending':
+        participation.status = 'approved'
+    return participation
+
+
+def has_event_invitation(user_id, event_id):
+    """Return True if the user has a pending invitation notification for the event."""
+    return Notification.query.filter_by(
+        user_id=user_id,
+        type='invitation',
+        related_event_id=event_id
+    ).first() is not None
+
+
+def clear_event_invitation(user_id, event_id):
+    """Remove invitation notifications so the host can re-invite after the user leaves."""
+    Notification.query.filter_by(
+        user_id=user_id,
+        type='invitation',
+        related_event_id=event_id
+    ).delete(synchronize_session=False)
 
 
 # ============================================================
@@ -246,9 +299,22 @@ def create_event():
 def event_detail(event_id):
     """View a single event's detail page."""
     event = Event.query.get_or_404(event_id)
-    if not event.is_public and (
-            not current_user.is_authenticated or
-            current_user.id != event.host_id):
+    user_participation = None
+    if current_user.is_authenticated:
+        user_participation = Participation.query.filter_by(
+            user_id=current_user.id,
+            event_id=event_id
+        ).first()
+
+    can_view_private_event = (
+            current_user.is_authenticated and (
+            current_user.id == event.host_id or
+            current_user.is_admin() or
+            (user_participation is not None and user_participation.status == 'approved') or
+            has_event_invitation(current_user.id, event_id)
+    )
+    )
+    if not event.is_public and not can_view_private_event:
         abort(403)
 
     participants = []
@@ -257,13 +323,6 @@ def event_detail(event_id):
             current_user.id == event.host_id):
         participants = [p for p in event.participations
                         if p.status == 'approved']
-
-    user_participation = None
-    if current_user.is_authenticated:
-        user_participation = Participation.query.filter_by(
-            user_id=current_user.id,
-            event_id=event_id
-        ).first()
 
     return render_template('events/event_details.html',
                            event=event,
@@ -361,8 +420,16 @@ def cancel_event(event_id):
     approved = [p for p in participants if p.status == 'approved']
 
     send_cancellation_emails(event, approved)
+    for participation in approved:
+        notification = Notification(
+            user_id=participation.user_id,
+            actor_user_id=current_user.id,
+            type='cancellation',
+            message=f'Event "{event.title}" has been cancelled by the host.',
+            related_event_id=event_id
+        )
+        db.session.add(notification)
     event.is_cancelled = True
-    event.is_public = False
     db.session.commit()
 
     logger.info(f'Event cancelled: {event_id} by user {current_user.id}')
@@ -602,21 +669,17 @@ def profile(user_id):
     """View a user's public profile."""
     user = User.query.get_or_404(user_id)
 
-    # Hide admin profiles from others
-    if user.is_admin() and (not current_user.is_authenticated or current_user.id != user.id):
-        if not (current_user.is_authenticated and current_user.is_admin()):
-            abort(404)
+    if not can_view_profile(user):
+        return render_private_profile(user)
 
-    # Filter out anonymous events from public profile view
-    can_see_anon = current_user.is_authenticated and (current_user.is_admin() or current_user.id == user_id)
-    
-    if not user.is_profile_public and not can_see_anon:
-        abort(403)
-    
+    can_see_anon = current_user.is_authenticated and (
+            current_user.is_admin() or current_user.id == user_id
+    )
+
     hosted_events_query = Event.query.filter_by(host_id=user_id, is_public=True)
     if not can_see_anon:
         hosted_events_query = hosted_events_query.filter_by(is_anonymous=False)
-    
+
     hosted_events = hosted_events_query.order_by(Event.event_time.desc()).limit(5).all()
 
     history_events = []
@@ -626,7 +689,7 @@ def profile(user_id):
         participations = Participation.query.filter_by(
             user_id=user_id, status='approved'
         ).all()
-        
+
         history_events = []
         for p in participations:
             if not p.event.is_anonymous or can_see_anon:
@@ -635,7 +698,50 @@ def profile(user_id):
     return render_template('profiles/profile.html',
                            user=user,
                            hosted_events=hosted_events,
-                           history_events=history_events)
+                           history_events=history_events,
+                           followers_count=user.followers.count(),
+                           following_count=len(visible_following(user)))
+
+
+@main.route('/profile/<int:user_id>/followers')
+def profile_followers(user_id):
+    """View a user's followers."""
+    user = User.query.get_or_404(user_id)
+
+    if not can_view_profile(user):
+        return render_private_profile(user)
+
+    if user.is_admin():
+        abort(404)
+
+    follower_rows = user.followers.order_by(Follow.created_at.desc()).all()
+    followers = [row.follower for row in follower_rows]
+    return render_template(
+        'profiles/followers.html',
+        user=user,
+        followers=followers,
+        followers_count=len(followers)
+    )
+
+
+@main.route('/profile/<int:user_id>/following')
+def profile_following(user_id):
+    """View users this profile follows."""
+    user = User.query.get_or_404(user_id)
+
+    if not can_view_profile(user):
+        return render_private_profile(user)
+
+    if user.is_admin():
+        abort(404)
+
+    following = visible_following(user)
+    return render_template(
+        'profiles/following.html',
+        user=user,
+        following=following,
+        following_count=len(following)
+    )
 
 
 @main.route('/profile/edit', methods=['GET', 'POST'])
@@ -649,8 +755,12 @@ def edit_profile():
         current_user.bio = form.bio.data
         current_user.location = form.location.data
         current_user.interests = form.interests.data
-        current_user.is_profile_public = form.is_profile_public.data
-        current_user.is_history_public = form.is_history_public.data
+        if current_user.is_admin():
+            current_user.is_profile_public = False
+            current_user.is_history_public = False
+        else:
+            current_user.is_profile_public = form.is_profile_public.data
+            current_user.is_history_public = form.is_history_public.data
         db.session.commit()
         flash('Profile updated.', 'success')
         return redirect(url_for('main.profile', user_id=current_user.id))
@@ -659,8 +769,9 @@ def edit_profile():
         form.bio.data = current_user.bio
         form.location.data = current_user.location
         form.interests.data = current_user.interests
-        form.is_profile_public.data = current_user.is_profile_public
-        form.is_history_public.data = current_user.is_history_public
+        if not current_user.is_admin():
+            form.is_profile_public.data = current_user.is_profile_public
+            form.is_history_public.data = current_user.is_history_public
     return render_template('profiles/edit_profile.html', form=form, user=current_user)
 
 
@@ -758,7 +869,6 @@ def server_error(e):
     return render_template('errors/500.html'), 500
 
 
-
 # ============================================================
 # FOLLOW / UNFOLLOW
 # ============================================================
@@ -768,11 +878,18 @@ def server_error(e):
 @active_required
 def follow_user(user_id):
     """Follow or unfollow a user."""
+    if current_user.is_admin():
+        flash('Admin accounts cannot follow other users.', 'info')
+        return redirect(request.referrer or url_for('main.index'))
+
     if user_id == current_user.id:
         flash('You cannot follow yourself.', 'danger')
         return redirect(url_for('main.profile', user_id=user_id))
 
     user = User.query.get_or_404(user_id)
+    if user.is_admin():
+        return render_private_profile(user)
+
     existing = Follow.query.filter_by(
         follower_id=current_user.id,
         followed_id=user_id
@@ -789,6 +906,7 @@ def follow_user(user_id):
 
         notification = Notification(
             user_id=user_id,
+            actor_user_id=current_user.id,
             type='follow',
             message=f'{current_user.name} started following you.',
             related_event_id=None
@@ -817,7 +935,11 @@ def join_event(event_id):
         flash('This event has been cancelled.', 'danger')
         return redirect(url_for('main.event_detail', event_id=event_id))
 
-    if not event.is_public:
+    invited_to_private_event = (
+            not event.is_public and
+            has_event_invitation(current_user.id, event_id)
+    )
+    if not event.is_public and not invited_to_private_event:
         abort(403)
 
     if event.host_id == current_user.id:
@@ -840,7 +962,7 @@ def join_event(event_id):
             flash('This event is full.', 'danger')
             return redirect(url_for('main.event_detail', event_id=event_id))
 
-    if event.approval_mode == 'automatic':
+    if event.approval_mode == 'automatic' or invited_to_private_event:
         status = 'approved'
         flash('You have joined the event!', 'success')
         # notify host
@@ -856,13 +978,14 @@ def join_event(event_id):
         send_email(
             current_user.email,
             f'MeetingPoint — You joined: {event.title}',
-            f'Hi {current_user.name},\n\nYou have successfully joined "{event.title}" on {event.event_time.strftime("%B %d, %Y at %H:%M")}.\n\n— MeetingPoint'
+            f'Hi {current_user.name},\n\nyou have successfully joined "{event.title}" on {event.event_time.strftime("%B %d, %Y at %H:%M")}.\n\n— MeetingPoint'
         )
     else:
         status = 'pending'
         flash('Your join request has been sent. The host will review it.', 'info')
         notification = Notification(
             user_id=event.host_id,
+            actor_user_id=current_user.id,
             type='join_request',
             message=f'{current_user.name} requested to join your event "{event.title}".',
             related_event_id=event_id
@@ -890,6 +1013,7 @@ def leave_event(event_id):
 
     event = Event.query.get_or_404(event_id)
     db.session.delete(participation)
+    clear_event_invitation(current_user.id, event_id)
     db.session.commit()
 
     notification = Notification(
@@ -916,8 +1040,14 @@ def leave_event(event_id):
 def approve_participant(event_id, user_id):
     """Approve a participant's join request."""
     participation = Participation.query.filter_by(
-        user_id=user_id, event_id=event_id, status='pending'
-    ).first_or_404()
+        user_id=user_id, event_id=event_id
+    ).first()
+    if not participation:
+        flash('That request no longer exists.', 'info')
+        return redirect(request.referrer or url_for('main.event_chat', event_id=event_id))
+    if participation.status != 'pending':
+        flash('That request has already been handled.', 'info')
+        return redirect(request.referrer or url_for('main.event_chat', event_id=event_id))
 
     event = Event.query.get_or_404(event_id)
     participation.status = 'approved'
@@ -929,6 +1059,13 @@ def approve_participant(event_id, user_id):
         related_event_id=event_id
     )
     db.session.add(notification)
+    Notification.query.filter_by(
+        user_id=current_user.id,
+        type='join_request',
+        related_event_id=event_id,
+        actor_user_id=user_id,
+        is_read=False
+    ).update({'is_read': True}, synchronize_session=False)
     db.session.commit()
 
     from app.utils import send_email
@@ -950,8 +1087,14 @@ def approve_participant(event_id, user_id):
 def decline_participant(event_id, user_id):
     """Decline a participant's join request."""
     participation = Participation.query.filter_by(
-        user_id=user_id, event_id=event_id, status='pending'
-    ).first_or_404()
+        user_id=user_id, event_id=event_id
+    ).first()
+    if not participation:
+        flash('That request no longer exists.', 'info')
+        return redirect(request.referrer or url_for('main.event_chat', event_id=event_id))
+    if participation.status != 'pending':
+        flash('That request has already been handled.', 'info')
+        return redirect(request.referrer or url_for('main.event_chat', event_id=event_id))
 
     event = Event.query.get_or_404(event_id)
     participation.status = 'declined'
@@ -963,6 +1106,13 @@ def decline_participant(event_id, user_id):
         related_event_id=event_id
     )
     db.session.add(notification)
+    Notification.query.filter_by(
+        user_id=current_user.id,
+        type='join_request',
+        related_event_id=event_id,
+        actor_user_id=user_id,
+        is_read=False
+    ).update({'is_read': True}, synchronize_session=False)
     db.session.commit()
 
     logger.info(f'Participant declined: user={user_id} event={event_id}')
@@ -1018,8 +1168,10 @@ def invite_user(event_id, user_id):
         flash(f'{user.name} has already been invited.', 'info')
         return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
 
+    add_invited_participation(event, user)
     notification = Notification(
         user_id=user_id,
+        actor_user_id=current_user.id,
         type='invitation',
         message=f'You have been invited to "{event.title}" by {current_user.name}.',
         related_event_id=event_id
@@ -1048,10 +1200,88 @@ def invite_user(event_id, user_id):
 def share_event(event_id):
     """Generate a shareable link for a public event."""
     event = Event.query.get_or_404(event_id)
-    if not event.is_public:
+    if event.is_cancelled:
+        abort(403)
+    if not current_user.is_authenticated or current_user.id != event.host_id:
         abort(403)
     share_url = url_for('main.event_detail', event_id=event_id, _external=True)
-    return render_template('events/share_event.html', event=event, share_url=share_url)
+    followers = []
+    invited_follower_ids = set()
+    if current_user.is_authenticated:
+        followers = [
+            row.follower for row in current_user.followers.order_by(Follow.created_at.desc()).all()
+        ]
+        if followers:
+            follower_ids = [follower.id for follower in followers]
+            invited_follower_ids = {
+                row.user_id for row in Notification.query.filter(
+                    Notification.user_id.in_(follower_ids),
+                    Notification.type == 'invitation',
+                    Notification.related_event_id == event_id
+                ).all()
+            }
+    return render_template(
+        'events/share_event.html',
+        event=event,
+        share_url=share_url,
+        followers=followers,
+        invited_follower_ids=invited_follower_ids
+    )
+
+
+@main.route('/events/<int:event_id>/share-to-follower/<int:follower_id>', methods=['POST'])
+@login_required
+@active_required
+def share_event_to_follower(event_id, follower_id):
+    """Send an event invitation notification to one of the user's followers."""
+    event = Event.query.get_or_404(event_id)
+    if event.is_cancelled:
+        abort(403)
+    if event.host_id != current_user.id:
+        abort(403)
+
+    follower = User.query.get_or_404(follower_id)
+    is_follower = Follow.query.filter_by(
+        follower_id=follower_id,
+        followed_id=current_user.id
+    ).first() is not None
+    if not is_follower:
+        abort(403)
+
+    # Check if user is already attending (has approved participation)
+    existing_participation = Participation.query.filter_by(
+        user_id=follower_id,
+        event_id=event_id,
+        status='approved'
+    ).first()
+    if existing_participation:
+        flash(f'{follower.name} is already attending this event.', 'info')
+        return redirect(url_for('main.share_event', event_id=event_id))
+
+    # Check if invitation already exists
+    existing_notification = Notification.query.filter_by(
+        user_id=follower_id,
+        type='invitation',
+        related_event_id=event_id,
+        actor_user_id=current_user.id
+    ).first()
+    if existing_notification:
+        flash(f'{follower.name} already received this invitation.', 'info')
+        return redirect(url_for('main.share_event', event_id=event_id))
+
+    add_invited_participation(event, follower)
+    notification = Notification(
+        user_id=follower_id,
+        actor_user_id=current_user.id,
+        type='invitation',
+        message=f'{current_user.name} invited you to "{event.title}".',
+        related_event_id=event_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    flash(f'Invitation sent to {follower.name}.', 'success')
+    return redirect(url_for('main.share_event', event_id=event_id))
 
 
 # ============================================================
@@ -1130,12 +1360,22 @@ def notifications():
         user_id=current_user.id
     ).order_by(Notification.created_at.desc()).all()
 
-    unread = [n for n in user_notifications if not n.is_read]
-    for n in unread:
-        n.is_read = True
-    db.session.commit()
+    pending_join_requests = set()
+    for notif in user_notifications:
+        if notif.type == 'join_request' and notif.related_event_id and notif.actor_user_id:
+            pending = Participation.query.filter_by(
+                event_id=notif.related_event_id,
+                user_id=notif.actor_user_id,
+                status='pending'
+            ).first()
+            if pending:
+                pending_join_requests.add((notif.related_event_id, notif.actor_user_id))
 
-    return render_template('notifications.html', notifications=user_notifications)
+    return render_template(
+        'notifications.html',
+        notifications=user_notifications,
+        pending_join_requests=pending_join_requests
+    )
 
 
 @main.route('/notifications/mark-read', methods=['POST'])
@@ -1144,6 +1384,15 @@ def mark_notifications_read():
     """Mark all notifications as read."""
     Notification.query.filter_by(
         user_id=current_user.id, is_read=False
-    ).update({'is_read': True})
+    ).update({'is_read': True}, synchronize_session=False)
+    db.session.commit()
+    return redirect(url_for('main.notifications'))
+
+
+@main.route('/notifications/clear', methods=['POST'])
+@login_required
+def clear_notifications():
+    """Delete all notifications for the current user."""
+    Notification.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
     db.session.commit()
     return redirect(url_for('main.notifications'))

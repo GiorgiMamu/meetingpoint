@@ -5,20 +5,20 @@
     <div class="col-md-4 text-center">
         <div class="card p-4">
             {% if user.profile_photo %}
-                <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
-                     class="avatar-img" alt="{{ user.name }}'s profile photo">
+            <img alt="{{ user.name }}'s profile photo"
+                 class="avatar-img" src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}">
             {% else %}
-                <div class="avatar-circle">
-                    {{ user.name.strip()[0].upper() if user.name and user.name.strip() else '?' }}
-                </div>
+            <div class="avatar-circle">
+                {{ user.name.strip()[0].upper() if user.name and user.name.strip() else '?' }}
+            </div>
             {% endif %}
 
             <h3 class="mb-1">{{ user.name }}</h3>
             {% if user.location %}
-                <p class="text-muted small mb-1">📍 {{ user.location }}</p>
+            <p class="text-muted small mb-1">📍 {{ user.location }}</p>
             {% endif %}
             {% if user.bio %}
-                <p class="mt-2 mb-1 small">{{ user.bio }}</p>
+            <p class="mt-2 mb-1 small">{{ user.bio }}</p>
             {% endif %}
             {% if user.interests %}
             <div class="mt-1">
@@ -26,30 +26,45 @@
 
                 <div class="d-flex flex-wrap justify-content-center gap-1">
                     {% for interest in user.interests.split(',') %}
-                        <span class="badge bg-secondary"
-                              style="max-width:150px; white-space:normal; word-break:break-word; text-align:center;">
+                    <span class="badge bg-secondary"
+                          style="max-width:150px; white-space:normal; word-break:break-word; text-align:center;">
                             {{ interest.strip() }}
                         </span>
                     {% endfor %}
                 </div>
             </div>
-        {% endif %}
+            {% endif %}
+
+            {% if not user.is_admin() %}
+            <div class="d-flex justify-content-center gap-3 mt-3 mb-2">
+                <a class="text-decoration-none text-dark"
+                   href="{{ url_for('main.profile_followers', user_id=user.id) }}">
+                    <div class="fw-semibold">{{ followers_count }}</div>
+                    <div class="text-muted small">Followers</div>
+                </a>
+                <a class="text-decoration-none text-dark"
+                   href="{{ url_for('main.profile_following', user_id=user.id) }}">
+                    <div class="fw-semibold">{{ following_count }}</div>
+                    <div class="text-muted small">Following</div>
+                </a>
+            </div>
+            {% endif %}
 
             {% if current_user.is_authenticated and current_user.id == user.id %}
-                <a href="{{ url_for('main.edit_profile') }}"
-                   class="btn btn-outline-primary btn-sm mt-3">✏️ Edit profile</a>
-                <a href="{{ url_for('main.history') }}"
-                   class="btn btn-outline-secondary btn-sm mt-2">📋 View full history</a>
-            {% elif current_user.is_authenticated %}
-                {% set is_following = current_user.following.filter_by(followed_id=user.id).first() %}
-                <form method="POST" action="{{ url_for('main.follow_user', user_id=user.id) }}" class="mt-3">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    {% if is_following %}
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">Unfollow</button>
-                    {% else %}
-                        <button type="submit" class="btn btn-outline-primary btn-sm">Follow</button>
-                    {% endif %}
-                </form>
+            <a class="btn btn-outline-primary btn-sm mt-3"
+               href="{{ url_for('main.edit_profile') }}">✏️ Edit profile</a>
+            <a class="btn btn-outline-secondary btn-sm mt-2"
+               href="{{ url_for('main.history') }}">📋 View full history</a>
+            {% elif current_user.is_authenticated and not current_user.is_admin() and not user.is_admin() %}
+            {% set is_following = current_user.following.filter_by(followed_id=user.id).first() %}
+            <form action="{{ url_for('main.follow_user', user_id=user.id) }}" class="mt-3" method="POST">
+                <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                {% if is_following %}
+                <button class="btn btn-outline-secondary btn-sm" type="submit">Unfollow</button>
+                {% else %}
+                <button class="btn btn-outline-primary btn-sm" type="submit">Follow</button>
+                {% endif %}
+            </form>
             {% endif %}
         </div>
     </div>
@@ -57,38 +72,38 @@
     <div class="col-md-8">
         <h5 class="section-title">Hosted events</h5>
         {% if hosted_events %}
-            <div class="list-group mb-4">
-                {% for event in hosted_events %}
-                    <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-                       class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong>{{ event.title }}</strong>
-                            <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
-                        </div>
-                    </a>
-                {% endfor %}
-            </div>
+        <div class="list-group mb-4">
+            {% for event in hosted_events %}
+            <a class="list-group-item list-group-item-action"
+               href="{{ url_for('main.event_detail', event_id=event.id) }}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>{{ event.title }}</strong>
+                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
         {% else %}
-            <p class="text-muted mb-4">No hosted events.</p>
+        <p class="text-muted mb-4">No hosted events.</p>
         {% endif %}
 
         {% if user.is_history_public or (current_user.is_authenticated and current_user.id == user.id) %}
-            <h5 class="section-title">Event history</h5>
-            {% if history_events %}
-                <div class="list-group">
-                    {% for event in history_events[:5] %}
-                        <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-                           class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <strong>{{ event.title }}</strong>
-                                <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
-                            </div>
-                        </a>
-                    {% endfor %}
+        <h5 class="section-title">Event history</h5>
+        {% if history_events %}
+        <div class="list-group">
+            {% for event in history_events[:5] %}
+            <a class="list-group-item list-group-item-action"
+               href="{{ url_for('main.event_detail', event_id=event.id) }}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>{{ event.title }}</strong>
+                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
                 </div>
-            {% else %}
-                <p class="text-muted">No event history.</p>
-            {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">No event history.</p>
+        {% endif %}
         {% endif %}
     </div>
 </div>

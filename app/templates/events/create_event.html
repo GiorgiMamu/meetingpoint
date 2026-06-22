@@ -7,7 +7,7 @@
             <h2 class="mb-1">{{ title }}</h2>
             <p class="text-muted small mb-4">Fill in the details for your event</p>
 
-            <form method="POST" enctype="multipart/form-data" id="event-form" novalidate>
+            <form enctype="multipart/form-data" id="event-form" method="POST" novalidate>
                 {{ form.hidden_tag() }}
 
                 <h6 class="section-title mb-3">Basic information</h6>
@@ -15,25 +15,33 @@
                 <div class="mb-3">
                     {{ form.title.label(class="form-label") }}
                     {{ form.title(class="form-control", maxlength=150, placeholder="Give your event a clear title") }}
-                    {% for e in form.title.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    {% for e in form.title.errors %}
+                    <div class="text-danger small mt-1">{{ e }}</div>
+                    {% endfor %}
                 </div>
 
                 <div class="mb-3">
                     {{ form.description.label(class="form-label") }}
                     {{ form.description(class="form-control", rows=4, maxlength=3000, placeholder="What's this event about? What should attendees expect?") }}
-                    {% for e in form.description.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    {% for e in form.description.errors %}
+                    <div class="text-danger small mt-1">{{ e }}</div>
+                    {% endfor %}
                 </div>
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         {{ form.event_time.label(class="form-label") }}
                         {{ form.event_time(class="form-control") }}
-                        {% for e in form.event_time.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.event_time.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                     <div class="col-md-6">
                         {{ form.category.label(class="form-label") }}
                         {{ form.category(class="form-select") }}
-                        {% for e in form.category.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.category.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -47,19 +55,25 @@
                 <div class="mb-3">
                     {{ form.location_text.label(class="form-label") }}
                     {{ form.location_text(class="form-control", maxlength=255, placeholder="Address or area name") }}
-                    {% for e in form.location_text.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    {% for e in form.location_text.errors %}
+                    <div class="text-danger small mt-1">{{ e }}</div>
+                    {% endfor %}
                 </div>
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         {{ form.lat.label(class="form-label") }}
                         {{ form.lat(class="form-control", id="lat-field", placeholder="e.g. 41.6938") }}
-                        {% for e in form.lat.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.lat.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                     <div class="col-md-6">
                         {{ form.lng.label(class="form-label") }}
                         {{ form.lng(class="form-control", id="lng-field", placeholder="e.g. 44.8015") }}
-                        {% for e in form.lng.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.lng.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="mb-3">
@@ -75,13 +89,15 @@
                 <div class="mb-3">
                     {{ form.photo.label(class="form-label") }}
                     {{ form.photo(class="form-control", accept="image/*") }}
-                    {% for e in form.photo.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    {% for e in form.photo.errors %}
+                    <div class="text-danger small mt-1">{{ e }}</div>
+                    {% endfor %}
                     {% if event and event.photo %}
-                        <div class="mt-2 d-flex align-items-center gap-3">
-                            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                                 class="rounded" style="max-height:80px;" alt="Current event photo">
-                            <span class="text-muted small">Current photo — upload a new one to replace it.</span>
-                        </div>
+                    <div class="mt-2 d-flex align-items-center gap-3">
+                        <img alt="Current event photo"
+                             class="rounded" src="{{ url_for('static', filename='uploads/' + event.photo) }}" style="max-height:80px;">
+                        <span class="text-muted small">Current photo — upload a new one to replace it.</span>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -89,19 +105,25 @@
                     <div class="col-md-4">
                         {{ form.capacity_min.label(class="form-label") }}
                         {{ form.capacity_min(class="form-control", min=1, placeholder="e.g. 2") }}
-                        {% for e in form.capacity_min.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.capacity_min.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                     <div class="col-md-4">
                         {{ form.capacity_max.label(class="form-label") }}
                         {{ form.capacity_max(class="form-control", min=1, id="capacity-max", placeholder="e.g. 20") }}
-                        {% for e in form.capacity_max.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.capacity_max.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         {{ form.price.label(class="form-label") }}
                         {{ form.price(class="form-control", min=0, step="0.01", placeholder="0 = free") }}
-                        {% for e in form.price.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        {% for e in form.price.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
                     </div>
                     <div class="col-md-4">
                         {{ form.currency.label(class="form-label") }}
@@ -129,7 +151,7 @@
 
                 <div class="d-flex gap-2">
                     {{ form.submit(class="btn btn-primary px-4") }}
-                    <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('main.discover') }}">Cancel</a>
                 </div>
             </form>
         </div>
@@ -138,62 +160,62 @@
 {% endblock %}
 
 {% block scripts %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-// ── Form validation ──
-document.addEventListener('DOMContentLoaded', function () {
-    var form = document.getElementById('event-form');
+    // ── Form validation ──
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('event-form');
 
-    // Initialize map for location picking
-    var map = L.map('location-map').setView([41.6938, 44.8015], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+        // Initialize map for location picking
+        var map = L.map('location-map').setView([41.6938, 44.8015], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-    var marker = null;
-    var latField = document.getElementById('lat-field');
-    var lngField = document.getElementById('lng-field');
+        var marker = null;
+        var latField = document.getElementById('lat-field');
+        var lngField = document.getElementById('lng-field');
 
-    // If lat/lng already set (edit mode), show existing marker
-    if (latField.value && lngField.value) {
-        var lat = parseFloat(latField.value);
-        var lng = parseFloat(lngField.value);
-        marker = L.marker([lat, lng]).addTo(map);
-        map.setView([lat, lng], 14);
-    }
+        // If lat/lng already set (edit mode), show existing marker
+        if (latField.value && lngField.value) {
+            var lat = parseFloat(latField.value);
+            var lng = parseFloat(lngField.value);
+            marker = L.marker([lat, lng]).addTo(map);
+            map.setView([lat, lng], 14);
+        }
 
-    // Click on map to set location
+        // Click on map to set location
     map.on('click', function(e) {
         if (marker) { map.removeLayer(marker); }
-        marker = L.marker(e.latlng).addTo(map);
-        latField.value = e.latlng.lat.toFixed(6);
-        lngField.value = e.latlng.lng.toFixed(6);
-    });
+            marker = L.marker(e.latlng).addTo(map);
+            latField.value = e.latlng.lat.toFixed(6);
+            lngField.value = e.latlng.lng.toFixed(6);
+        });
 
-    // Form submit validation
-    form.addEventListener('submit', function (e) {
-        var capMin = parseInt(document.querySelector('[name="capacity_min"]').value);
-        var capMax = parseInt(document.getElementById('capacity-max').value);
-        if (capMin && capMax && capMax < capMin) {
-            e.preventDefault();
-            document.getElementById('capacity-max').setCustomValidity(
-                'Maximum must be greater than minimum.');
-            document.getElementById('capacity-max').reportValidity();
-            return;
-        } else {
-            document.getElementById('capacity-max').setCustomValidity('');
-        }
-        var eventTime = new Date(document.querySelector('[name="event_time"]').value);
-        var now = new Date();
-        if (eventTime && eventTime < now) {
-            e.preventDefault();
-            var eventTimeField = document.querySelector('[name="event_time"]');
-            eventTimeField.setCustomValidity('Event date and time must be in the future.');
-            eventTimeField.reportValidity();
-        }
+        // Form submit validation
+        form.addEventListener('submit', function (e) {
+            var capMin = parseInt(document.querySelector('[name="capacity_min"]').value);
+            var capMax = parseInt(document.getElementById('capacity-max').value);
+            if (capMin && capMax && capMax < capMin) {
+                e.preventDefault();
+                document.getElementById('capacity-max').setCustomValidity(
+                    'Maximum must be greater than minimum.');
+                document.getElementById('capacity-max').reportValidity();
+                return;
+            } else {
+                document.getElementById('capacity-max').setCustomValidity('');
+            }
+            var eventTime = new Date(document.querySelector('[name="event_time"]').value);
+            var now = new Date();
+            if (eventTime && eventTime < now) {
+                e.preventDefault();
+                var eventTimeField = document.querySelector('[name="event_time"]');
+                eventTimeField.setCustomValidity('Event date and time must be in the future.');
+                eventTimeField.reportValidity();
+            }
+        });
     });
-});
 </script>
 {% endblock %}

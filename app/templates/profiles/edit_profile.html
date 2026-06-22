@@ -11,31 +11,32 @@
                     {{ form.name.label(class="form-label") }}
                     {{ form.name(class="form-control", maxlength=100) }}
                     {% for error in form.name.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-3">
                     {{ form.bio.label(class="form-label") }}
                     {{ form.bio(class="form-control", rows=3, maxlength=500, placeholder="Tell people about yourself...") }}
                     {% for error in form.bio.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-3">
                     {{ form.location.label(class="form-label") }}
                     {{ form.location(class="form-control", maxlength=150, placeholder="e.g. Tbilisi, Georgia") }}
                     {% for error in form.location.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-4">
                     {{ form.interests.label(class="form-label") }}
                     {{ form.interests(class="form-control", maxlength=255, placeholder="e.g. hiking, music, cinema") }}
                     {% for error in form.interests.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
 
+                {% if not user.is_admin() %}
                 <h6 class="section-title mb-3">Privacy</h6>
                 <div class="mb-2 form-check">
                     {{ form.is_profile_public(class="form-check-input") }}
@@ -47,11 +48,16 @@
                     {{ form.is_history_public.label(class="form-check-label") }}
                     <div class="text-muted small">Others can see your event history</div>
                 </div>
+                {% else %}
+                <div class="alert alert-secondary small mb-4">
+                    Admin profiles are private and history is visible only to the admin account.
+                </div>
+                {% endif %}
 
                 <div class="d-flex gap-2">
                     {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('main.profile', user_id=user.id) }}"
-                       class="btn btn-outline-secondary">Cancel</a>
+                    <a class="btn btn-outline-secondary"
+                       href="{{ url_for('main.profile', user_id=user.id) }}">Cancel</a>
                 </div>
             </form>
         </div>

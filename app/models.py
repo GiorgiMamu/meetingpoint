@@ -1,11 +1,14 @@
 from datetime import datetime
+
 from flask_login import UserMixin
+
 from app import db, login_manager
 
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
 
 class User(UserMixin, db.Model):
     """Represents a registered user of MeetingPoint."""
@@ -34,13 +37,17 @@ class User(UserMixin, db.Model):
                              foreign_keys='Event.host_id',
                              cascade='all, delete-orphan')
     participations = db.relationship('Participation', backref='user', lazy=True,
-                                    cascade='all, delete-orphan')
+                                     cascade='all, delete-orphan')
     bookmarks = db.relationship('Bookmark', backref='user', lazy=True,
-                               cascade='all, delete-orphan')
-    notifications = db.relationship('Notification', backref='user', lazy=True,
-                                   cascade='all, delete-orphan')
+                                cascade='all, delete-orphan')
+    notifications = db.relationship(
+        'Notification',
+        backref='user',
+        lazy=True,
+        foreign_keys='Notification.user_id',
+        cascade='all, delete-orphan')
     messages = db.relationship('Message', backref='author', lazy=True,
-                              cascade='all, delete-orphan')
+                               cascade='all, delete-orphan')
 
     following = db.relationship('Follow', foreign_keys='Follow.follower_id',
                                 backref='follower', lazy='dynamic',
@@ -87,9 +94,9 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     participations = db.relationship('Participation', backref='event', lazy=True,
-                                    cascade='all, delete-orphan')
+                                     cascade='all, delete-orphan')
     messages = db.relationship('Message', backref='event', lazy=True,
-                              cascade='all, delete-orphan')
+                               cascade='all, delete-orphan')
     bookmarks = db.relationship(
         'Bookmark',
         backref='event',
@@ -187,11 +194,13 @@ class Notification(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     type = db.Column(db.String(50), nullable=False)
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     related_event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    actor_user = db.relationship('User', foreign_keys=[actor_user_id], lazy='joined')
 
     def __repr__(self):
         return f'<Notification user={self.user_id} type={self.type}>'

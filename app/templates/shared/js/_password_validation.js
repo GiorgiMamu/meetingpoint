@@ -1,10 +1,10 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form');
     const pw = document.querySelector('[name="password"]');
     const cpw = document.querySelector('[name="confirm_password"]');
 
     if (cpw && pw) {
-        cpw.addEventListener('input', function() {
+        cpw.addEventListener('input', function () {
             cpw.setCustomValidity('');
             if (pw.value && cpw.value && pw.value !== cpw.value) {
                 cpw.setCustomValidity('Passwords do not match.');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function (e) {
         if (cpw) {
             cpw.setCustomValidity('');
         }

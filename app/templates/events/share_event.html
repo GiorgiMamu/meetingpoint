@@ -5,18 +5,49 @@
     <div class="col-md-6">
         <div class="card p-4 text-center">
             <div style="font-size:3rem; margin-bottom:1rem;">🔗</div>
-            <h3>Share this event</h3>
+            <h3>Invite a follower</h3>
             <p class="text-muted">{{ event.title }}</p>
+            {% if followers %}
+            <div class="text-start mb-3">
+                <h6 class="section-title">Invite a follower</h6>
+                <div class="list-group">
+                    {% for follower in followers %}
+                    <form action="{{ url_for('main.share_event_to_follower', event_id=event.id, follower_id=follower.id) }}"
+                          class="list-group-item d-flex justify-content-between align-items-center"
+                          method="POST">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-initials-sm">
+                                {{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?'
+                                }}
+                            </div>
+                            <a class="text-decoration-none text-dark"
+                               href="{{ url_for('main.profile', user_id=follower.id) }}">{{ follower.name }}</a>
+                        </div>
+                        <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                        {% if follower.id in invited_follower_ids %}
+                        <button class="btn btn-sm btn-outline-secondary" disabled type="button">Invited</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-primary" type="submit">Send</button>
+                        {% endif %}
+                    </form>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-light border text-start">
+                No followers yet. Invitations will appear here once you have followers.
+            </div>
+            {% endif %}
             <div class="input-group mb-3">
-                <input type="text" id="share-url" class="form-control"
-                       value="{{ share_url }}" readonly>
+                <input class="form-control" id="share-url" readonly
+                       type="text" value="{{ share_url }}">
                 <button class="btn btn-primary" onclick="copyLink()">Copy</button>
             </div>
-            <p id="copy-msg" class="text-success small" style="display:none;">
+            <p class="text-success small" id="copy-msg" style="display:none;">
                 Link copied to clipboard!
             </p>
-            <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-               class="btn btn-outline-secondary mt-2">← Back to event</a>
+            <a class="btn btn-outline-secondary mt-2"
+               href="{{ url_for('main.event_detail', event_id=event.id) }}">Back to event</a>
         </div>
     </div>
 </div>
@@ -24,14 +55,14 @@
 
 {% block scripts %}
 <script>
-function copyLink() {
-    var input = document.getElementById('share-url');
-    input.select();
-    document.execCommand('copy');
-    document.getElementById('copy-msg').style.display = 'block';
-    setTimeout(function() {
-        document.getElementById('copy-msg').style.display = 'none';
-    }, 2000);
-}
+    function copyLink() {
+        var input = document.getElementById('share-url');
+        input.select();
+        document.execCommand('copy');
+        document.getElementById('copy-msg').style.display = 'block';
+        setTimeout(function () {
+            document.getElementById('copy-msg').style.display = 'none';
+        }, 2000);
+    }
 </script>
 {% endblock %}

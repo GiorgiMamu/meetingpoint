@@ -1,16 +1,20 @@
+import html
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
-from flask_wtf import CSRFProtect
-from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import LoginManager
+from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import CSRFProtect
+from markupsafe import escape
+
 from config import config
 
 db = SQLAlchemy()
@@ -21,6 +25,7 @@ mail = Mail()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "600 per hour"])
 socketio = SocketIO()
+
 
 def create_app(config_name='default'):
     app = Flask(__name__, instance_relative_config=True)
@@ -54,6 +59,7 @@ def create_app(config_name='default'):
     app.logger.info('MeetingPoint startup')
 
     from app import models
+    from app.models import Notification
 
     @app.context_processor
     def inject_category_labels():
@@ -72,6 +78,22 @@ def create_app(config_name='default'):
             'other': 'Other'
         }
         return dict(category_labels=category_labels)
+
+    @app.context_processor
+    def inject_unread_notifications_count():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return dict(unread_notifications_count=0)
+        unread_notifications_count = Notification.query.filter_by(
+            user_id=current_user.id, is_read=False
+        ).count()
+        return dict(unread_notifications_count=unread_notifications_count)
+
+    @app.template_filter('display')
+    def display_text(value):
+        if value is None:
+            return ''
+        return escape(html.unescape(str(value)))
 
     from app.routes import main
     app.register_blueprint(main)

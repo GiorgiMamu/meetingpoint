@@ -9,19 +9,24 @@
     📅 <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
     {% if event.location_text %} &nbsp;·&nbsp; 📍 {{ event.location_text }}{% endif %}
 </p>
+{% if event.is_cancelled %}
+<div class="alert alert-warning">
+    🚫 This event has been cancelled.
+</div>
+{% endif %}
 <div class="d-flex flex-wrap gap-1 mb-3">
     {% if event.category %}
-        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
+    <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
     {% endif %}
     {% if event.mood_tags %}
-        {% for tag in event.mood_tags.split(',') %}
-            <span class="badge bg-info">{{ tag.strip() }}</span>
-        {% endfor %}
+    {% for tag in event.mood_tags.split(',') %}
+    <span class="badge bg-info">{{ tag.strip() }}</span>
+    {% endfor %}
     {% endif %}
     {% if event.price and event.price > 0 %}
-        <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
+    <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
     {% else %}
-        <span class="badge bg-success">Free</span>
+    <span class="badge bg-success">Free</span>
     {% endif %}
 </div>
 
@@ -31,8 +36,8 @@
     <!-- LEFT COLUMN -->
     <div class="col-lg-8">
         {% if event.photo %}
-            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                 class="event-header-img" alt="{{ event.title }} event photo">
+        <img alt="{{ event.title }} event photo"
+             class="event-header-img" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
         {% endif %}
         <hr>
         <div style="background: rgba(255,255,255,0.45); border-left: 3px solid var(--forest-dark, #2d6a4f); border-radius: 6px; padding: 14px 18px; margin-bottom: 1rem;">
@@ -42,12 +47,13 @@
         </div>
         <p class="text-muted small mt-3">
             Hosted by
-            {% if event.is_anonymous or event.host.role == 'admin' %}
-                <span class="fw-semibold">MeetingPoint Team</span>
+            {% if event.is_anonymous or (event.host.role == 'admin' and not (current_user.is_authenticated and
+            current_user.is_admin() and current_user.id == event.host_id)) %}
+            <span class="fw-semibold">MeetingPoint Team</span>
             {% else %}
-                <a href="{{ url_for('main.profile', user_id=event.host.id) }}" class="fw-semibold">
-                    {{ event.host.name }}
-                </a>
+            <a class="fw-semibold" href="{{ url_for('main.profile', user_id=event.host.id) }}">
+                {{ event.host.name }}
+            </a>
             {% endif %}
         </p>
     </div>
@@ -60,60 +66,61 @@
             <div class="card-body">
                 <h6 class="section-title">Participation</h6>
                 {% if current_user.is_authenticated %}
-                    {% if current_user.id == event.host_id %}
-                        <p class="text-muted small mb-3">You are the host of this event.</p>
-                        <a href="{{ url_for('main.edit_event', event_id=event.id) }}"
-                           class="btn btn-outline-primary w-100 mb-2">✏️ Edit event</a>
-                        <a href="{{ url_for('main.share_event', event_id=event.id) }}"
-                           class="btn btn-outline-secondary w-100 mb-2">🔗 Share event</a>
-                        <a href="{{ url_for('main.event_chat', event_id=event.id) }}"
-                           class="btn btn-outline-primary w-100 mb-2">💬 Host chat</a>
-                        {% if not event.is_cancelled %}
-                            <form method="POST" action="{{ url_for('main.cancel_event', event_id=event.id) }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-warning w-100 mb-2"
-                                        onclick="return confirm('Cancel this event and notify all participants?')">
-                                    ⚠️ Cancel event
-                                </button>
-                            </form>
-                        {% else %}
-                            <div class="alert alert-danger py-2 mb-2 text-center small fw-semibold">
-                                🚫 This event has been cancelled
-                            </div>
-                        {% endif %}
-                        <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-outline-danger w-100"
-                                    onclick="return confirm('Permanently delete this event? This cannot be undone.')">
-                                🗑️ Delete event
-                            </button>
-                        </form>
-                    {% elif user_participation %}
-                        {% if user_participation.status == 'pending' %}
-                            <div class="alert alert-warning mb-0">⏳ Your request is pending approval.</div>
-                        {% elif user_participation.status == 'approved' %}
-                            <div class="alert alert-success mb-2">✅ You are attending this event.</div>
-                            <a href="{{ url_for('main.event_chat', event_id=event.id) }}"
-                               class="btn btn-outline-primary w-100 mb-2">💬 Open chat</a>
-                            <form method="POST" action="{{ url_for('main.leave_event', event_id=event.id) }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-danger w-100"
-                                        onclick="return confirm('Leave this event?')">Leave event</button>
-                            </form>
-                        {% elif user_participation.status == 'declined' %}
-                            <div class="alert alert-danger mb-0">❌ Your request was declined.</div>
-                        {% endif %}
-                    {% else %}
-                        <p class="text-muted small">Join this event to participate and access the group chat.</p>
-                        <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-primary w-100">Join event</button>
-                        </form>
-                    {% endif %}
+                {% if current_user.id == event.host_id %}
+                <p class="text-muted small mb-3">You are the host of this event.</p>
+                {% if not event.is_cancelled %}
+                <a class="btn btn-outline-primary w-100 mb-2"
+                   href="{{ url_for('main.edit_event', event_id=event.id) }}">✏️ Edit event</a>
+                {% if event.host.role != 'admin' %}
+                <a class="btn btn-outline-secondary w-100 mb-2"
+                   href="{{ url_for('main.share_event', event_id=event.id) }}">🔗 Share or invite</a>
+                {% endif %}
+                <a class="btn btn-outline-primary w-100 mb-2"
+                   href="{{ url_for('main.event_chat', event_id=event.id) }}">💬 Event chat</a>
+                <form action="{{ url_for('main.cancel_event', event_id=event.id) }}" method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-warning w-100 mb-2" onclick="return confirm('Cancel this event and notify all participants?')"
+                            type="submit">
+                        ⚠️ Cancel event
+                    </button>
+                </form>
+                {% endif %}
+                <form action="{{ url_for('main.delete_event', event_id=event.id) }}" method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger w-100" onclick="return confirm('Permanently delete this event? This cannot be undone.')"
+                            type="submit">
+                        🗑️ Delete event
+                    </button>
+                </form>
+                {% elif user_participation %}
+                {% if user_participation.status == 'pending' %}
+                <div class="alert alert-warning mb-0">⏳ Your request is pending approval.</div>
+                {% elif user_participation.status == 'approved' %}
+                <div class="alert alert-success mb-2">✅ You are attending this event.</div>
+                {% if not event.is_cancelled %}
+                <a class="btn btn-outline-primary w-100 mb-2"
+                   href="{{ url_for('main.event_chat', event_id=event.id) }}">💬 Open chat</a>
+                {% endif %}
+                <form action="{{ url_for('main.leave_event', event_id=event.id) }}" method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger w-100" onclick="return confirm('Leave this event?')"
+                            type="submit">Leave event
+                    </button>
+                </form>
+                {% elif user_participation.status == 'declined' %}
+                <div class="alert alert-danger mb-0">❌ Your request was declined.</div>
+                {% endif %}
                 {% else %}
-                    <p class="text-muted small mb-0">
-                        <a href="{{ url_for('main.login') }}">Log in</a> to join this event.
-                    </p>
+                <p class="text-muted small">Join this event to participate and access the group chat.</p>
+                <form action="{{ url_for('main.join_event', event_id=event.id) }}" method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                    <button class="btn btn-primary w-100" type="submit">Join event</button>
+                </form>
+                {% endif %}
+                {% else %}
+                <p class="text-muted small mb-0">
+                    <a href="{{ url_for('main.login') }}">Log in</a> to join this event.
+                </p>
                 {% endif %}
             </div>
         </div>
@@ -132,20 +139,20 @@
                 </div>
                 <div class="progress mb-1" style="height:6px; border-radius:6px; background:#e9ecef;">
                     <div class="progress-bar" role="progressbar"
-                        style="width:{{ fill_percent }}%; border-radius:6px;
+                         style="width:{{ fill_percent }}%; border-radius:6px;
                             background-color: {% if fill_percent >= 90 %}var(--rose-dark){% elif fill_percent >= 60 %}var(--sand-dark){% else %}var(--forest-light){% endif %};">
                     </div>
                 </div>
                 <div class="d-flex justify-content-between">
                     <small class="text-muted">{{ fill_percent }}% full</small>
                     {% if event.capacity_min %}
-                        <small class="text-muted">Min {{ event.capacity_min }} to run</small>
+                    <small class="text-muted">Min {{ event.capacity_min }} to run</small>
                     {% endif %}
                 </div>
                 {% if approved_count >= event.capacity_max %}
-                    <div class="alert alert-danger mt-2 mb-0 py-1 text-center small fw-semibold">
-                        Event is full
-                    </div>
+                <div class="alert alert-danger mt-2 mb-0 py-1 text-center small fw-semibold">
+                    Event is full
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -155,13 +162,14 @@
         {% if current_user.is_authenticated and current_user.id != event.host_id %}
         <div class="card mt-3">
             <div class="card-body">
-                {% set is_bookmarked = current_user.bookmarks | selectattr('event_id', 'equalto', event.id) | list | length > 0 %}
-                <form method="POST" action="{{ url_for('main.toggle_bookmark', event_id=event.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% set is_bookmarked = current_user.bookmarks | selectattr('event_id', 'equalto', event.id) | list |
+                length > 0 %}
+                <form action="{{ url_for('main.toggle_bookmark', event_id=event.id) }}" method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
                     {% if is_bookmarked %}
-                        <button type="submit" class="btn btn-outline-warning w-100">🔖 Remove bookmark</button>
+                    <button class="btn btn-outline-warning w-100" type="submit">🔖 Remove bookmark</button>
                     {% else %}
-                        <button type="submit" class="btn btn-outline-secondary w-100">🔖 Bookmark event</button>
+                    <button class="btn btn-outline-secondary w-100" type="submit">🔖 Bookmark event</button>
                     {% endif %}
                 </form>
             </div>
@@ -174,27 +182,28 @@
             <div class="card-body">
                 <h6 class="section-title">Participants ({{ participants|length }})</h6>
                 {% for p in participants[:8] %}
-                    {% set is_anon_host = (event.is_anonymous or event.host.role == 'admin') and p.user_id == event.host_id %}
-                    <a href="{% if is_anon_host %}#{% else %}{{ url_for('main.profile', user_id=p.user_id) }}{% endif %}"
-                       class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1 {% if is_anon_host %}pe-none{% endif %}">
-                        <div class="avatar-initials-sm">
-                            {% if is_anon_host %}
-                                M
-                            {% else %}
-                                {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
-                            {% endif %}
-                        </div>
-                        <span class="small">
+                {% set is_anon_host = (event.is_anonymous or event.host.role == 'admin') and p.user_id == event.host_id
+                %}
+                <a class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1 {% if is_anon_host %}pe-none{% endif %}"
+                   href="{% if is_anon_host %}#{% else %}{{ url_for('main.profile', user_id=p.user_id) }}{% endif %}">
+                    <div class="avatar-initials-sm">
+                        {% if is_anon_host %}
+                        M
+                        {% else %}
+                        {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                        {% endif %}
+                    </div>
+                    <span class="small">
                             {% if is_anon_host %}
                                 MeetingPoint Team
                             {% else %}
                                 {{ p.user.name }}
                             {% endif %}
                         </span>
-                    </a>
+                </a>
                 {% endfor %}
                 {% if participants|length > 8 %}
-                    <p class="text-muted small mt-1 mb-0">+{{ participants|length - 8 }} more</p>
+                <p class="text-muted small mt-1 mb-0">+{{ participants|length - 8 }} more</p>
                 {% endif %}
             </div>
         </div>

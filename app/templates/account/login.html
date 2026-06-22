@@ -10,16 +10,17 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-control", required=True, type="email", maxlength=150, placeholder="you@example.com") }}
+                    {{ form.email(class="form-control", required=True, type="email", maxlength=150,
+                    placeholder="you@example.com") }}
                     {% for error in form.email.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-3">
                     {{ form.password.label(class="form-label") }}
                     {{ form.password(class="form-control", required=True, maxlength=72, placeholder="Your password") }}
                     {% for error in form.password.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-4 d-flex justify-content-between align-items-center">
@@ -27,7 +28,7 @@
                         {{ form.remember(class="form-check-input") }}
                         {{ form.remember.label(class="form-check-label") }}
                     </div>
-                    <a href="{{ url_for('main.request_password_reset') }}" class="small">Forgot password?</a>
+                    <a class="small" href="{{ url_for('main.request_password_reset') }}">Forgot password?</a>
                 </div>
                 {{ form.submit(class="btn btn-primary w-100") }}
             </form>

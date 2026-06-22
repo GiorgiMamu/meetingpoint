@@ -2,64 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>{% block title %}MeetingPoint{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicons/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='favicons/site.webmanifest') }}">
+    <link href="{{ url_for('static', filename='favicons/apple-touch-icon.png') }}" rel="apple-touch-icon"
+          sizes="180x180">
+    <link href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}" rel="icon" sizes="32x32"
+          type="image/png">
+    <link href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}" rel="icon" sizes="16x16"
+          type="image/png">
+    <link href="{{ url_for('static', filename='favicons/site.webmanifest') }}" rel="manifest">
 </head>
 <body>
-    {% if current_user.is_authenticated and current_user.is_blocked %}
-    <div class="alert alert-danger alert-dismissible fade show rounded-0 border-0 mb-0 py-2" role="alert" style="background-color: #dc3545; color: white;">
-        <div class="container text-center small">
-            <i class="fas fa-ban me-2"></i> Your account has been limited by an administrator. Some actions are restricted.
-        </div>
+{% if current_user.is_authenticated and current_user.is_blocked %}
+<div class="alert alert-danger alert-dismissible fade show rounded-0 border-0 mb-0 py-2" role="alert"
+     style="background-color: #dc3545; color: white;">
+    <div class="container text-center small">
+        <i class="fas fa-ban me-2"></i> Your account has been limited by an administrator. Some actions are restricted.
     </div>
-    {% endif %}
+</div>
+{% endif %}
 
 <!-- Navigation -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand" href="{{ url_for('main.index') }}">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="MeetingPoint logo" title="MeetingPoint">
+            <img alt="MeetingPoint logo" src="{{ url_for('static', filename='logo.png') }}" title="MeetingPoint">
             MeetingPoint
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button class="navbar-toggler" data-bs-target="#navbarNav" data-bs-toggle="collapse" type="button">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 {% if current_user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover') }}">Discover</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.chats') }}">Chats</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.notifications') }}">Notifications</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            {{ current_user.name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My events</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.bookmarks') }}">Bookmarks</a></li>
-                            <li><a class="dropdown-item" href="#">Settings</a></li>
-                            {% if current_user.is_admin() %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Admin panel</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.admin_users') }}">Manage users</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.admin_events') }}">Manage events</a></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Log out</a></li>
-                        </ul>
-                    </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover') }}">Discover</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.chats') }}">Chats</a></li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('main.notifications') }}">
+                        <span>Notifications</span>
+                        {% if unread_notifications_count %}
+                        <span aria-label="{{ unread_notifications_count }} unread notifications"
+                              class="position-relative d-inline-flex align-items-center">
+                                    <span class="rounded-circle bg-danger"
+                                          style="width:8px;height:8px;display:inline-block;"></span>
+                                </span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                        {{ current_user.name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a>
+                        </li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My events</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.bookmarks') }}">Bookmarks</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        {% if current_user.is_admin() %}
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><h6 class="dropdown-header">Admin panel</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.admin_users') }}">Manage users</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.admin_events') }}">Manage events</a></li>
+                        {% endif %}
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Log out</a></li>
+                    </ul>
+                </li>
                 {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.login') }}">Log in</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.register') }}">Register</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.login') }}">Log in</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.register') }}">Register</a></li>
                 {% endif %}
             </ul>
         </div>
@@ -69,14 +89,14 @@
 <!-- Flash messages -->
 <div class="container mt-3">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button class="btn-close" data-bs-dismiss="alert" type="button"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
     {% endwith %}
 </div>
 
@@ -86,13 +106,13 @@
 </div>
 
 <!-- Cookie consent banner -->
-<div id="cookie-banner" class="fixed-bottom bg-dark text-white p-3 justify-content-between align-items-center"
+<div class="fixed-bottom bg-dark text-white p-3 justify-content-between align-items-center" id="cookie-banner"
      style="display:none;">
     <span>We use cookies to keep you logged in and remember your preferences. By using MeetingPoint you agree to our
-        <a href="{{ url_for('main.privacy') }}" class="text-warning">Privacy Policy</a> and
-        <a href="{{ url_for('main.terms') }}" class="text-warning">Terms of Service</a>.
+        <a class="text-warning" href="{{ url_for('main.privacy') }}">Privacy Policy</a> and
+        <a class="text-warning" href="{{ url_for('main.terms') }}">Terms of Service</a>.
     </span>
-    <button id="cookie-accept-btn" class="btn btn-warning btn-sm ms-3">Got it</button>
+    <button class="btn btn-warning btn-sm ms-3" id="cookie-accept-btn">Got it</button>
 </div>
 
 <footer class="mt-4">
@@ -112,7 +132,7 @@
         if (!banner) return;
 
         function hasConsentCookie() {
-            return document.cookie.split(';').some(function(c) {
+            return document.cookie.split(';').some(function (c) {
                 return c.trim().startsWith('cookie_consent=true');
             });
         }

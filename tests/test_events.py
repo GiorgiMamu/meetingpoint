@@ -1,10 +1,12 @@
-import pytest
-from app import db, bcrypt
-from app.models import User, Event, Bookmark
-from datetime import datetime, timedelta
 import io
 import uuid
+from datetime import datetime, timedelta
+
 from PIL import Image
+
+from app import db, bcrypt
+from app.models import User, Event, Bookmark
+
 
 def create_user(app, email='host@example.com', password='password123', name='Host User'):
     with app.app_context():
@@ -238,6 +240,7 @@ def test_private_event_blocked(client, app):
     response = client.get(f'/events/{event.id}')
     assert response.status_code == 403
 
+
 def test_image_upload_rejected_non_image(client, app):
     create_user(app)
     login(client)
@@ -251,13 +254,13 @@ def test_image_upload_rejected_non_image(client, app):
         assert Event.query.count() == 0
 
 
-
 def create_test_image():
     img = Image.new('RGB', (100, 100), color=(100, 150, 100))
     buf = io.BytesIO()
     img.save(buf, format='JPEG')
     buf.seek(0)
     return buf
+
 
 def test_image_upload_valid(client, app):
     create_user(app)

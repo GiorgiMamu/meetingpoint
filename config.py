@@ -1,5 +1,6 @@
 import os
 
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-change-in-production'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///meetingpoint.db'
@@ -24,13 +25,16 @@ class Config:
 
     LOG_FILE = 'logs/meetingpoint.log'
 
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SESSION_COOKIE_SECURE = False
 
+
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True  # HTTPS only in production
+
 
 class TestingConfig(Config):
     TESTING = True
@@ -39,10 +43,10 @@ class TestingConfig(Config):
     RATELIMIT_ENABLED = False
     DEBUG = False
 
+
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
     'default': DevelopmentConfig,
     'testing': TestingConfig,
-
 }

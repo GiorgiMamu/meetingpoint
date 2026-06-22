@@ -21,57 +21,59 @@
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
-                <tr>
-                    <th>Event</th>
-                    <th>Host</th>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th class="text-end">Actions</th>
-                </tr>
+            <tr>
+                <th>Event</th>
+                <th>Host</th>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
             </thead>
             <tbody>
-                {% for event in events %}
-                <tr>
-                    <td>
-                        <div class="fw-bold">{{ event.title }}</div>
-                        <div class="text-muted small">{{ event.location_text }}</div>
-                    </td>
-                    <td>
-                        <div class="small">
-                            {% if event.is_anonymous or event.host.role == 'admin' %}
-                                <span class="text-muted">MeetingPoint Team</span>
-                            {% else %}
-                                {{ event.host.name }}
-                                <div class="text-muted" style="font-size: 0.75rem;">{{ event.host.email }}</div>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="small">{{ event.event_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        <span class="badge bg-info text-dark">{{ event.category }}</span>
-                    </td>
-                    <td>
-                        {% if event.is_cancelled %}
-                            <span class="badge bg-danger">Cancelled</span>
-                        {% elif not event.is_public %}
-                            <span class="badge bg-secondary">Private</span>
+            {% for event in events %}
+            <tr>
+                <td>
+                    <div class="fw-bold">{{ event.title }}</div>
+                    <div class="text-muted small">{{ event.location_text }}</div>
+                </td>
+                <td>
+                    <div class="small">
+                        {% if event.is_anonymous or event.host.role == 'admin' %}
+                        <span class="text-muted">MeetingPoint Team</span>
                         {% else %}
-                            <span class="badge bg-success">Public</span>
+                        {{ event.host.name }}
+                        <div class="text-muted" style="font-size: 0.75rem;">{{ event.host.email }}</div>
                         {% endif %}
-                    </td>
-                    <td class="text-end">
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="{{ url_for('main.event_detail', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id, next=url_for('main.admin_events')) }}"
-                                  onsubmit="return confirm('Permanently delete event &quot;{{ event.title }}&quot;? This cannot be undone.')">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
+                    </div>
+                </td>
+                <td class="small">{{ event.event_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <span class="badge bg-info text-dark">{{ event.category }}</span>
+                </td>
+                <td>
+                    {% if event.is_cancelled %}
+                    <span class="badge bg-danger">Cancelled</span>
+                    {% elif not event.is_public %}
+                    <span class="badge bg-secondary">Private</span>
+                    {% else %}
+                    <span class="badge bg-success">Public</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{{ url_for('main.event_detail', event_id=event.id) }}">View</a>
+                        <form action="{{ url_for('main.delete_event', event_id=event.id, next=url_for('main.admin_events')) }}"
+                              method="POST"
+                              onsubmit="return confirm('Permanently delete event &quot;{{ event.title }}&quot;? This cannot be undone.')">
+                            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>

@@ -32,7 +32,8 @@ def send_reminders(app):
     to all approved participants who haven't been reminded yet.
     """
     with app.app_context():
-        from app.models import Event, Participation
+        from app import db
+        from app.models import Event, Participation, Notification
         from app.utils import send_email
 
         now = datetime.utcnow()
@@ -55,6 +56,14 @@ def send_reminders(app):
             for p in approved:
                 user = p.user
                 try:
+                    existing = Notification.query.filter_by(
+                        user_id=user.id,
+                        type='reminder',
+                        related_event_id=event.id
+                    ).first()
+                    if existing:
+                        continue
+
                     body = f"""Hi {user.name},
 
 This is a reminder that the event "{event.title}" is happening tomorrow at {event.event_time.strftime('%H:%M')}.
@@ -70,6 +79,13 @@ See you there!
                         f'MeetingPoint — Reminder: {event.title} is tomorrow',
                         body
                     )
+                    db.session.add(Notification(
+                        user_id=user.id,
+                        type='reminder',
+                        message=f'Reminder: "{event.title}" is tomorrow.',
+                        related_event_id=event.id
+                    ))
+                    db.session.commit()
                     logger.info(f'Reminder sent to {user.email} for event {event.id}')
                 except Exception as e:
                     logger.warning(f'Failed to send reminder to {user.email}: {e}')

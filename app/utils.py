@@ -1,22 +1,28 @@
-from itsdangerous import URLSafeTimedSerializer
-from flask import current_app, url_for
-from flask_mail import Message
-from app import mail
-import bleach
+import html
+import math
 import os
+import time
 import uuid
+
+import bleach
+import requests
 from PIL import Image
 from flask import current_app
-import math
-from geopy.geocoders import Nominatim
+from flask import url_for
+from flask_mail import Message
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-import time
-import requests
+from geopy.geocoders import Nominatim
+from itsdangerous import URLSafeTimedSerializer
+
+from app import mail
+
 
 def sanitize(value):
     if value is None:
         return None
-    return bleach.clean(str(value).strip(), tags=[], strip=True)
+    cleaned = bleach.clean(str(value).strip(), tags=[], strip=True)
+    return html.unescape(cleaned)
+
 
 def generate_token(data, salt):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -33,16 +39,17 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    if current_app.config.get('TESTING'):
-        return
-    sender = current_app.config.get('MAIL_USERNAME')  # fetch at call time, not config load time
+    sender = current_app.config.get('MAIL_USERNAME')
     msg = Message(
         subject,
         sender=sender,
         recipients=[to],
         body=body
     )
-    mail.send(msg)
+    if not current_app.config.get('TESTING'):
+        mail.send(msg)
+    return msg
+
 
 def send_verification_email(user):
     token = generate_token(user.email, salt='email-confirm')
@@ -56,7 +63,7 @@ This link expires in 1 hour.
 
 If you did not register for MeetingPoint, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Confirm your email', body)
+    return send_email(user.email, 'MeetingPoint — Confirm your email', body)
 
 
 def send_password_reset_email(user):
@@ -74,9 +81,7 @@ This link expires in 1 hour.
 
 If you did not request a password reset, ignore this email.
 """
-    send_email(user.email, 'MeetingPoint — Password reset', body)
-
-
+    return send_email(user.email, 'MeetingPoint — Password reset', body)
 
 
 def save_event_photo(file):
@@ -112,6 +117,7 @@ def delete_event_photo(filename):
 
 def send_cancellation_emails(event, participants):
     """Send cancellation notification to all participants of an event."""
+    sent = []
     for participation in participants:
         user = participation.user
         body = f"""Hi {user.name},
@@ -122,8 +128,12 @@ We're sorry for the inconvenience.
 
 — MeetingPoint
 """
-        send_email(user.email, f'MeetingPoint — Event cancelled: {event.title}', body)
-
+        sent.append(send_email(
+            user.email,
+            f'MeetingPoint — Event cancelled: {event.title}',
+            body
+        ))
+    return sent
 
 
 def geocode_location(location_text):
@@ -155,7 +165,7 @@ def haversine_distance(lat1, lng1, lat2, lng2):
     phi2 = math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lng2 - lng1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -173,11 +183,9 @@ def filter_events_by_radius(events, center_lat, center_lng, radius_km):
     return result
 
 
-
-
-
 _exchange_cache = {'rates': {}, 'timestamp': 0}
 _CACHE_TTL = 3600  # 1 hour
+
 
 def get_exchange_rates():
     """

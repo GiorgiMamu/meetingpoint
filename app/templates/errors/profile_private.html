@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Private profile — MeetingPoint{% endblock %}
+{% block content %}
+<div class="empty-state">
+    <div class="empty-state-icon">🔒</div>
+    <h5>This profile is private</h5>
+    <p>You do not have permission to view this user's profile.</p>
+    <a class="btn btn-primary mt-2" href="{{ url_for('main.discover') }}">Discover events</a>
+</div>
+{% endblock %}

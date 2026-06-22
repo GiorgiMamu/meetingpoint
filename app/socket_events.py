@@ -3,7 +3,7 @@ socket_events.py — Flask-SocketIO event handlers for real-time chat.
 """
 import logging
 from datetime import datetime
-from flask import request
+
 from flask_login import current_user
 from flask_socketio import join_room, leave_room, emit
 
@@ -17,7 +17,6 @@ def register_socket_events(socketio):
     def handle_join(data):
         """User joins an event chat room."""
         from app.models import Event, Participation
-        from app import db
         from flask_login import current_user
 
         event_id = data.get('event_id')
@@ -95,7 +94,8 @@ def register_socket_events(socketio):
             'content': content,
             'author_name': current_user.name,
             'author_id': current_user.id,
-            'timestamp': msg.timestamp.strftime('%H:%M'),
+            'author_is_admin': current_user.is_admin(),
+            'timestamp': msg.timestamp.isoformat(),
             'event_id': event_id
         }, room=room)
 
@@ -103,7 +103,7 @@ def register_socket_events(socketio):
 
     @socketio.on('delete_message')
     def handle_delete_message(data):
-        """Host can delete any message in their event chat."""
+        """Host or message author can delete message."""
         from app.models import Event, Message
         from app import db
 
@@ -113,14 +113,20 @@ def register_socket_events(socketio):
         if not msg_id or not event_id or not current_user.is_authenticated:
             return
 
-        event = Event.query.get(event_id)
-        if not event or event.host_id != current_user.id:
+        msg = Message.query.get(msg_id)
+        if not msg or msg.event_id != event_id:
             return
 
-        msg = Message.query.get(msg_id)
-        if msg and msg.event_id == event_id:
+        event = Event.query.get(event_id)
+        if not event:
+            return
+
+        is_host = event.host_id == current_user.id
+        is_author = msg.user_id == current_user.id
+
+        if is_host or is_author:
             db.session.delete(msg)
             db.session.commit()
             room = f'event_{event_id}'
             emit('message_deleted', {'message_id': msg_id}, room=room)
-            logger.info(f'Message {msg_id} deleted by host {current_user.id}')
+            logger.info(f'Message {msg_id} deleted by {current_user.id}')

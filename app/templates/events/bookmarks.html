@@ -5,54 +5,54 @@
 <h2 class="mb-4">My bookmarks</h2>
 
 {% if bookmarks %}
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for bookmark in bookmarks %}
-        <div class="col">
-            <div class="card card-event h-100">
-                {% if bookmark.event.photo %}
-                    <img src="{{ url_for('static', filename='uploads/' + bookmark.event.photo) }}"
-                         class="card-img-top" alt="{{ bookmark.event.title }} event photo">
-                {% else %}
-                    <div class="gradient-placeholder">
-                        <span class="gradient-placeholder-icon">🗓️</span>
-                    </div>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for bookmark in bookmarks %}
+    <div class="col">
+        <div class="card card-event h-100">
+            {% if bookmark.event.photo %}
+            <img alt="{{ bookmark.event.title }} event photo"
+                 class="card-img-top" src="{{ url_for('static', filename='uploads/' + bookmark.event.photo) }}">
+            {% else %}
+            <div class="gradient-placeholder">
+                <span class="gradient-placeholder-icon">🗓️</span>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ bookmark.event.title }}</h5>
+                <p class="text-muted small mb-1">
+                    📅 {{ bookmark.event.event_time.strftime('%b %d, %Y · %H:%M') }}
+                </p>
+                {% if bookmark.event.location_text %}
+                <p class="text-muted small mb-2">📍 {{ bookmark.event.location_text }}</p>
                 {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ bookmark.event.title }}</h5>
-                    <p class="text-muted small mb-1">
-                        📅 {{ bookmark.event.event_time.strftime('%b %d, %Y · %H:%M') }}
-                    </p>
-                    {% if bookmark.event.location_text %}
-                        <p class="text-muted small mb-2">📍 {{ bookmark.event.location_text }}</p>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge bg-secondary">{{ category_labels.get(bookmark.event.category, bookmark.event.category) }}</span>
+                    {% if bookmark.event.price and bookmark.event.price > 0 %}
+                    <span class="badge bg-warning">{{ "%.2f"|format(bookmark.event.price) }} {{ bookmark.event.currency or 'GEL' }}</span>
+                    {% else %}
+                    <span class="badge bg-success">Free</span>
                     {% endif %}
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ category_labels.get(bookmark.event.category, bookmark.event.category) }}</span>
-                        {% if bookmark.event.price and bookmark.event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(bookmark.event.price) }} {{ bookmark.event.currency or 'GEL' }}</span>
-                        {% else %}
-                            <span class="badge bg-success">Free</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="card-footer d-flex gap-2">
-                    <a href="{{ url_for('main.event_detail', event_id=bookmark.event.id) }}"
-                       class="btn btn-outline-primary btn-sm flex-grow-1">View event</a>
-                    <form method="POST"
-                          action="{{ url_for('main.toggle_bookmark', event_id=bookmark.event.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">🗑️</button>
-                    </form>
                 </div>
             </div>
+            <div class="card-footer d-flex gap-2">
+                <a class="btn btn-outline-primary btn-sm flex-grow-1"
+                   href="{{ url_for('main.event_detail', event_id=bookmark.event.id) }}">View event</a>
+                <form action="{{ url_for('main.toggle_bookmark', event_id=bookmark.event.id) }}"
+                      method="POST">
+                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger btn-sm" type="submit">🗑️</button>
+                </form>
+            </div>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
+</div>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔖</div>
-        <h5>No bookmarks yet</h5>
-        <p>Discover events and bookmark the ones you're interested in.</p>
-        <a href="{{ url_for('main.discover') }}" class="btn btn-primary">Discover events</a>
-    </div>
+<div class="empty-state">
+    <div class="empty-state-icon">🔖</div>
+    <h5>No bookmarks yet</h5>
+    <p>Discover events and bookmark the ones you're interested in.</p>
+    <a class="btn btn-primary" href="{{ url_for('main.discover') }}">Discover events</a>
+</div>
 {% endif %}
 {% endblock %}

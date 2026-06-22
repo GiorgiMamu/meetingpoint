@@ -1,24 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Notifications — MeetingPoint{% endblock %}
 {% block content %}
+<style>
+    .notification-item:hover {
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+    }
+</style>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Notifications</h2>
-    {% if notifications %}
-    <form method="POST" action="{{ url_for('main.mark_notifications_read') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-outline-secondary btn-sm">
-            Mark all as read
-        </button>
-    </form>
-    {% endif %}
+    <div class="d-flex gap-2">
+        {% if notifications and notifications|selectattr('is_read', 'equalto', false)|list %}
+        <form action="{{ url_for('main.mark_notifications_read') }}" method="POST">
+            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">
+                Mark all as read
+            </button>
+        </form>
+        {% endif %}
+        {% if notifications %}
+        <form action="{{ url_for('main.clear_notifications') }}" method="POST">
+            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Clear all notifications?')"
+                    type="submit">
+                Clear all
+            </button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 
 {% if notifications %}
-    <div class="list-group">
-        {% for n in notifications %}
-        <div class="list-group-item {% if not n.is_read %}fw-semibold{% endif %}">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="d-flex gap-2 align-items-start">
+<div class="list-group">
+    {% for n in notifications %}
+    <div class="list-group-item notification-item">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="d-flex gap-2 align-items-start flex-grow-1">
                     <span style="font-size:1.2rem;">
                         {% if n.type == 'follow' %}👤
                         {% elif n.type == 'invitation' %}✉️
@@ -33,29 +50,94 @@
                         {% else %}📢
                         {% endif %}
                     </span>
-                    <div>
-                        <p class="mb-0">{{ n.message }}</p>
-                        {% if n.related_event_id %}
-                            <a href="{{ url_for('main.event_detail', event_id=n.related_event_id) }}"
-                               class="small text-muted">View event →</a>
+                <div class="flex-grow-1">
+                    <p class="mb-0">
+                        {% if n.type == 'follow' and n.actor_user %}
+                        <strong>{{ n.actor_user.name|display }}</strong> started following you.
+                        {% elif n.type == 'invitation' and n.actor_user and n.related_event %}
+                        <strong>{{ n.actor_user.name|display }}</strong> invited you to "<strong>{{
+                        n.related_event.title|display }}</strong>".
+                        {% elif n.type == 'join_request' and n.actor_user and n.related_event %}
+                        <strong>{{ n.actor_user.name|display }}</strong> requested to join "<strong>{{
+                        n.related_event.title|display }}</strong>".
+                        {% elif n.type == 'approval' and n.related_event %}
+                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" has been approved.
+                        {% elif n.type == 'declined' and n.related_event %}
+                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" was declined.
+                        {% elif n.type == 'cancellation' and n.related_event %}
+                        "<strong>{{ n.related_event.title|display }}</strong>" has been cancelled.
+                        {% else %}
+                        {{ n.message|display }}
+                        {% endif %}
+                    </p>
+                    {% set show_profile_button = n.actor_user is not none and n.type in ['follow', 'invitation',
+                    'join_request'] %}
+                    {% set show_event_button = n.related_event_id is not none and n.type in ['invitation', 'approval',
+                    'join_request', 'join', 'cancellation', 'declined', 'leave', 'removed', 'reminder'] %}
+                    {% if show_profile_button or show_event_button or n.type == 'join_request' %}
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% if n.type == 'join_request' and n.related_event_id and n.actor_user_id and
+                        (n.related_event_id, n.actor_user_id) in pending_join_requests %}
+                        <form action="{{ url_for('main.approve_participant', event_id=n.related_event_id, user_id=n.actor_user_id) }}"
+                              method="POST">
+                            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-success" type="submit">Approve</button>
+                        </form>
+                        <form action="{{ url_for('main.decline_participant', event_id=n.related_event_id, user_id=n.actor_user_id) }}"
+                              method="POST">
+                            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Decline</button>
+                        </form>
+                        {% endif %}
+
+                        {% if show_event_button %}
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('main.event_detail', event_id=n.related_event_id) }}">
+                            View event
+                        </a>
+                        {% endif %}
+
+                        {% if show_profile_button %}
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('main.profile', user_id=n.actor_user.id) }}">
+                            View profile
+                        </a>
                         {% endif %}
                     </div>
+                    {% endif %}
+
+                    {% if not n.is_read %}
+                    <span class="badge bg-primary mt-2" style="font-size:0.65rem;">New</span>
+                    {% endif %}
                 </div>
-                <small class="text-muted text-nowrap ms-3">
-                    {{ n.created_at.strftime('%b %d · %H:%M') }}
-                </small>
             </div>
-            {% if not n.is_read %}
-                <span class="badge bg-primary ms-1" style="font-size:0.65rem;">New</span>
-            {% endif %}
+            <small class="text-muted text-nowrap ms-3">
+                <span class="notification-timestamp" data-utc="{{ n.created_at.isoformat() }}">{{ n.created_at.strftime('%b %d · %H:%M') }}</span>
+            </small>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
+</div>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔔</div>
-        <h5>No notifications</h5>
-        <p>You're all caught up.</p>
-    </div>
+<div class="empty-state">
+    <div class="empty-state-icon">🔔</div>
+    <h5>No notifications</h5>
+    <p>You're all caught up.</p>
+</div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.notification-timestamp').forEach(function (el) {
+            var utc = el.getAttribute('data-utc');
+            if (!utc) return;
+            var date = new Date(utc + (utc.endsWith('Z') ? '' : 'Z'));
+            var day = date.toLocaleDateString([], {month: 'short', day: '2-digit'});
+            var time = date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+            el.innerText = day + ' · ' + time;
+        });
+    });
+</script>
 {% endblock %}

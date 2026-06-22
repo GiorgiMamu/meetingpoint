@@ -10,9 +10,10 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-4">
                     {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-control", required=True, type="email", maxlength=150, placeholder="you@example.com") }}
+                    {{ form.email(class="form-control", required=True, type="email", maxlength=150,
+                    placeholder="you@example.com") }}
                     {% for error in form.email.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 {{ form.submit(class="btn btn-primary w-100") }}

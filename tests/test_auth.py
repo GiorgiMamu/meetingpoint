@@ -1,6 +1,5 @@
-import pytest
-from app.models import User
 from app import db, bcrypt
+from app.models import User
 
 
 def create_user(app, email='test@example.com', password='password123',
@@ -19,6 +18,7 @@ def test_register_page_loads(client):
     response = client.get('/register')
     assert response.status_code == 200
 
+
 def test_register_new_user(client):
     response = client.post('/register', data={
         'name': 'Alice',
@@ -27,6 +27,7 @@ def test_register_new_user(client):
         'confirm_password': 'securepass1'
     }, follow_redirects=True)
     assert response.status_code == 200
+
 
 def test_register_duplicate_email(client, app):
     create_user(app)
@@ -55,6 +56,7 @@ def test_login_page_loads(client):
     response = client.get('/login')
     assert response.status_code == 200
 
+
 def test_login_valid_user(client, app):
     create_user(app)
     response = client.post('/login', data={
@@ -63,6 +65,7 @@ def test_login_valid_user(client, app):
     }, follow_redirects=True)
     assert response.status_code == 200
 
+
 def test_login_wrong_password(client, app):
     create_user(app)
     response = client.post('/login', data={
@@ -70,6 +73,7 @@ def test_login_wrong_password(client, app):
         'password': 'wrongpassword'
     }, follow_redirects=True)
     assert b'Invalid email or password' in response.data
+
 
 def test_login_inactive_user(client, app):
     create_user(app, active=False)
@@ -116,6 +120,7 @@ def test_privacy_page(client):
     response = client.get('/privacy')
     assert response.status_code == 200
 
+
 def test_terms_page(client):
     response = client.get('/terms')
     assert response.status_code == 200
@@ -132,12 +137,14 @@ def test_admin_required_rejects_regular_user(client, app):
     response = client.get('/admin', follow_redirects=False)
     assert response.status_code in [404, 403]
 
+
 def test_generate_and_verify_token(app):
     with app.app_context():
         from app.utils import generate_token, verify_token
         token = generate_token('test@example.com', salt='email-confirm')
         result = verify_token(token, salt='email-confirm')
         assert result == 'test@example.com'
+
 
 def test_expired_token_returns_none(app):
     with app.app_context():

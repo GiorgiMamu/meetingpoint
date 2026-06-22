@@ -5,86 +5,84 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Discover events</h2>
     {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.create_event') }}" class="btn btn-success">+ Host an event</a>
+    <a class="btn btn-success" href="{{ url_for('main.create_event') }}">Host an event</a>
     {% endif %}
 </div>
 
 <!-- Search & Filter Bar -->
 <div class="search-bar mb-4">
-    <form method="GET" action="{{ url_for('main.discover') }}" id="discover-form">
+    <form action="{{ url_for('main.discover') }}" id="discover-form" method="GET">
 
         <div class="row g-2 mb-2">
             <div class="col-md-4">
                 <label class="form-label small fw-semibold mb-1">Search</label>
-                <input type="text" name="q" class="form-control"
-                       placeholder="Keywords..." value="{{ keyword }}">
+                <input class="form-control" name="q" placeholder="Keywords..."
+                       type="text" value="{{ keyword }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold mb-1">Category</label>
-                <select name="category" class="form-select">
+                <select class="form-select" name="category">
                     <option value="">All categories</option>
                     {% for value, label in categories %}
-                        <option value="{{ value }}" {% if value == selected_category %}selected{% endif %}>
-                            {{ label }}
-                        </option>
+                    <option {% if selected_category == value %}selected{% endif %} value="{{ value }}">
+                        {{ label }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">From</label>
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                <input class="form-control" name="date_from" type="date" value="{{ date_from }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">To</label>
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                <input class="form-control" name="date_to" type="date" value="{{ date_to }}">
             </div>
             <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Go</button>
+                <button class="btn btn-primary w-100" type="submit">Go</button>
             </div>
         </div>
-
 
 
         <!-- Advanced filters -->
         <div class="row g-2">
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Mood tag(s)</label>
-                <input type="text" name="mood" class="form-control"
-                       placeholder="e.g. adventurous" value="{{ mood }}">
+                <input class="form-control" name="mood" placeholder="e.g. adventurous"
+                       type="text" value="{{ mood }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Min participants</label>
-                <input type="number" name="size_min" class="form-control"
-                       placeholder="e.g. 5" min="1" value="{{ size_min }}">
+                <input class="form-control" min="1" name="size_min"
+                       placeholder="e.g. 5" type="number" value="{{ size_min }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Max participants</label>
-                <input type="number" name="size_max" class="form-control"
-                       placeholder="e.g. 20" min="1" value="{{ size_max }}">
+                <input class="form-control" min="1" name="size_max"
+                       placeholder="e.g. 20" type="number" value="{{ size_max }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Max price</label>
                 <div class="input-group">
-                    <input type="number" name="price_max" class="form-control"
-                        placeholder="e.g. 10" min="0" step="0.01"
-                        value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
-                    <select name="price_currency" class="form-select" style="max-width:80px;" {% if free_only %}disabled{% endif %}>
+                    <input {% if free_only %}disabled{% endif %} class="form-control"
+                           min="0" name="price_max" placeholder="e.g. 10" step="0.01" type="number" value="{{ price_max }}"
+                    <select {% if free_only %}disabled{% endif %} class="form-select"
+                            name="price_currency" style="max-width:80px;">
                         {% for code in ['GEL','USD','EUR','GBP','TRY','RUB'] %}
-                            <option value="{{ code }}" {% if price_currency == code %}selected{% endif %}>{{ code }}</option>
+                        <option {% if price_currency == code %}selected{% endif %} value="{{ code }}">{{ code }}</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <div class="form-check mb-2">
-                    <input type="checkbox" name="free_only" value="1"
-                           class="form-check-input" id="free_only"
-                           {% if free_only %}checked{% endif %}>
+                    <input {% if free_only %}checked{% endif %} class="form-check-input"
+                           id="free_only" name="free_only" type="checkbox" value="1">
                     <label class="form-check-label" for="free_only">Free</label>
                 </div>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary w-100 mb-2">Clear</a>
+                <a class="btn btn-outline-secondary w-100 mb-2" href="{{ url_for('main.discover') }}">Clear</a>
             </div>
         </div>
 
@@ -92,21 +90,27 @@
         <div class="row g-2 mt-1 align-items-end">
             <div class="col-md-3 position-relative">
                 <label class="form-label small fw-semibold mb-1">Enter a location</label>
-                <input type="text" id="radius-location-input" class="form-control"
-                       placeholder="Type a location...">
-                <div id="radius-location-error" class="alert alert-danger py-1 px-2 position-absolute"
+                <input class="form-control" id="radius-location-input" placeholder="Type a location..."
+                       type="text">
+                <div class="alert alert-danger py-1 px-2 position-absolute" id="radius-location-error"
                      style="display:none; left:0; right:0; top:100%; margin-top:0.5rem; z-index:5; font-size:0.9rem; opacity:1; transition: opacity .3s ease;">
                 </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Radius (km)</label>
-                <input type="number" name="radius_km" class="form-control"
-                       placeholder="e.g. 10" min="1" max="500" value="{{ radius_km }}">
+                <input class="form-control" max="500" min="1"
+                       name="radius_km" placeholder="e.g. 10" type="number" value="{{ radius_km }}">
             </div>
-            <input type="hidden" name="center_lat" id="center_lat" value="{{ center_lat }}">
-            <input type="hidden" name="center_lng" id="center_lng" value="{{ center_lng }}">
+            <input id="center_lat" name="center_lat" type="hidden" value="{{ center_lat }}">
+            <input id="center_lng" name="center_lng" type="hidden" value="{{ center_lng }}">
             <div class="col-md-2">
-                <button type="button" id="set-location-btn" class="btn btn-outline-primary w-100">Apply location</button>
+                <button class="btn btn-outline-primary w-100" id="set-location-btn" type="button">Apply location
+                </button>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" id="toggle-map-btn" type="button">
+                    Show map
+                </button>
             </div>
             {% if center_lat and center_lng %}
             <div class="col-md-3">
@@ -121,7 +125,7 @@
 </div>
 
 <!-- Map View -->
-<div class="card mb-4">
+<div class="card mb-4" hidden id="map-section">
     <div class="card-body p-0">
         <div id="map" style="height: 380px; border-radius: var(--radius);"></div>
         <div class="text-muted small mt-1 px-2 pb-2">
@@ -136,17 +140,19 @@
 </div>
 
 {% if events %}
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for event in events %}
-        <div class="col">
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for event in events %}
+    <div class="col">
+        <a class="text-decoration-none text-reset d-block h-100"
+           href="{{ url_for('main.event_detail', event_id=event.id) }}">
             <div class="card card-event h-100">
                 {% if event.photo %}
-                    <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                         class="card-img-top" alt="{{ event.title }} event photo">
+                <img alt="{{ event.title }} event photo"
+                     class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
                 {% else %}
-                    <div class="gradient-placeholder">
-                        <span class="gradient-placeholder-icon">🗓️</span>
-                    </div>
+                <div class="gradient-placeholder">
+                    <span class="gradient-placeholder-icon">🗓️</span>
+                </div>
                 {% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ event.title }}</h5>
@@ -154,90 +160,96 @@
                         📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
                     </p>
                     {% if event.location_text %}
-                        <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
+                    <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
                     {% endif %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
                         <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
                         {% if event.price and event.price > 0 %}
-                                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
+                        <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
                         {% else %}
-                            <span class="badge bg-success">Free</span>
+                        <span class="badge bg-success">Free</span>
                         {% endif %}
                     </div>
                 </div>
-                <div class="card-footer">
-                    <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-                       class="btn btn-outline-primary btn-sm w-100">View event</a>
-                </div>
             </div>
-        </div>
-        {% endfor %}
+        </a>
     </div>
+    {% endfor %}
+</div>
 
-    <!-- Pagination -->
-    <nav class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if has_prev %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover', page=prev_num,
+<!-- Pagination -->
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('main.discover', page=prev_num,
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
                        price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
-                       center_lat=center_lat, center_lng=center_lng) }}">← Previous</a>
-                </li>
-            {% endif %}
-            <li class="page-item disabled">
-                <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
-            </li>
-            {% if has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover', page=next_num,
+                       center_lat=center_lat, center_lng=center_lng) }}">Previous</a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
+        </li>
+        {% if has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('main.discover', page=next_num,
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
                        price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
-                       center_lat=center_lat, center_lng=center_lng) }}">Next →</a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
+                       center_lat=center_lat, center_lng=center_lng) }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <h5>No events found</h5>
-        <p>Try adjusting your filters or
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('main.create_event') }}">create one yourself</a>.
-            {% else %}
-                <a href="{{ url_for('main.login') }}">log in to create one</a>.
-            {% endif %}
-        </p>
-    </div>
+<div class="empty-state">
+    <div class="empty-state-icon">🔍</div>
+    <h5>No events found</h5>
+    <p>Try adjusting your filters or
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.create_event') }}">create one yourself</a>.
+        {% else %}
+        <a href="{{ url_for('main.login') }}">log in to create one</a>.
+        {% endif %}
+    </p>
+</div>
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <!-- Leaflet.js -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-// ── Map initialization ──
-var map = L.map('map').setView([41.6938, 44.8015], 12);
+    var mapSection = document.getElementById('map-section');
+    var toggleMapBtn = document.getElementById('toggle-map-btn');
+    var mapInitialized = false;
+    var map = null;
+    var markers = null;
+    var radiusCenterMarker = null;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+    function initMap() {
+        if (mapInitialized) return;
+        mapInitialized = true;
+
+        map = L.map('map').setView([41.6938, 44.8015], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
 var markers = L.layerGroup();
 
-var events = [
+        var events = [
     {% for event in events %}
     {% if event.lat and event.lng %}
-    {
+                {
         lat: {{ event.lat }},
         lng: {{ event.lng }},
         title: {{ event.title | tojson }},
-        url: "{{ url_for('main.event_detail', event_id=event.id) }}",
+            url: "{{ url_for('main.event_detail', event_id=event.id) }}",
         time: {{ event.event_time.strftime('%b %d, %Y') | tojson }},
         location: {{ (event.location_text or '') | tojson }}
     },
@@ -245,158 +257,173 @@ var events = [
     {% endfor %}
 ];
 
-events.forEach(function(e) {
-    var marker = L.marker([e.lat, e.lng]);
-    marker.bindPopup(
-        '<strong><a href="' + e.url + '">' + e.title + '</a></strong><br>' +
-        '📅 ' + e.time + '<br>' +
-        (e.location ? '📍 ' + e.location : '')
-    );
-    markers.addLayer(marker);
-});
+        events.forEach(function (e) {
+            var marker = L.marker([e.lat, e.lng]);
+            marker.bindPopup(
+                '<strong><a href="' + e.url + '">' + e.title + '</a></strong><br>' +
+                '📅 ' + e.time + '<br>' +
+                (e.location ? '📍 ' + e.location : '')
+            );
+            markers.addLayer(marker);
+        });
 
-map.addLayer(markers);
-// Click on map to set radius center
+        map.addLayer(markers);
 
 var radiusCenterMarker = null;
 {% if center_lat and center_lng %}
 radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], {
-    icon: L.divIcon({
-        className: '',
-        html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-    })
+            icon: L.divIcon({
+                className: '',
+                html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            })
 }).addTo(map);
 {% endif %}
 
-map.on('click', function(e) {
-    var lat = e.latlng.lat.toFixed(6);
-    var lng = e.latlng.lng.toFixed(6);
+        map.on('click', function (e) {
+            var lat = e.latlng.lat.toFixed(6);
+            var lng = e.latlng.lng.toFixed(6);
 
-    document.getElementById('center_lat').value = lat;
-    document.getElementById('center_lng').value = lng;
+            document.getElementById('center_lat').value = lat;
+            document.getElementById('center_lng').value = lng;
 
-    if (radiusCenterMarker) { map.removeLayer(radiusCenterMarker); }
-    radiusCenterMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-            className: '',
-            html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7]
-        })
-    }).addTo(map);
+            if (radiusCenterMarker) {
+                map.removeLayer(radiusCenterMarker);
+            }
+            radiusCenterMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: '',
+                    html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                })
+            }).addTo(map);
 
-    var radiusKm = parseFloat(document.querySelector('[name="radius_km"]').value);
-    if (!radiusKm || isNaN(radiusKm)) {
-        document.querySelector('[name="radius_km"]').value = '10';
+            var radiusKm = parseFloat(document.querySelector('[name="radius_km"]').value);
+            if (!radiusKm || isNaN(radiusKm)) {
+                document.querySelector('[name="radius_km"]').value = '10';
+            }
+
+            document.getElementById('discover-form').submit();
+        });
     }
 
-    document.getElementById('discover-form').submit();
-});
+    toggleMapBtn.addEventListener('click', function () {
+        var opening = mapSection.hasAttribute('hidden');
+        if (opening) {
+            mapSection.removeAttribute('hidden');
+            toggleMapBtn.textContent = 'Hide map';
+            initMap();
+            setTimeout(function () {
+                if (map) map.invalidateSize();
+            }, 0);
+            return;
+        }
+        mapSection.setAttribute('hidden', '');
+        toggleMapBtn.textContent = 'Show map';
+    });
 
-// Fit map to markers if any exist
-{% if center_lat and center_lng %}
-// Radius search active — center map on the search location
-var centerLat = {{ center_lat|float }};
-var centerLng = {{ center_lng|float }};
-var radiusKm = {{ radius_km|float if radius_km else 10 }};
-map.setView([centerLat, centerLng], 11);
-
-// Draw a circle showing the search radius
-L.circle([centerLat, centerLng], {
-    radius: radiusKm * 1000,
-    color: '#1F3D2B',
-    fillColor: '#4E7A5A',
-    fillOpacity: 0.1,
-    weight: 2
-}).addTo(map);
-{% else %}
-// No radius filter — fit to all markers
-if (events.length > 0) {
-    var validEvents = events.filter(function(e) { return e.lat && e.lng; });
-    if (validEvents.length > 0) {
-        var bounds = L.latLngBounds(validEvents.map(function(e) { return [e.lat, e.lng]; }));
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-    }
-}
-{% endif %}
+    // ── Map initialization ──
+    // map created on demand
 </script>
 
 <script>
-// ── Handle free_only checkbox ──
-document.addEventListener('DOMContentLoaded', function() {
-    var freeOnlyCheckbox = document.getElementById('free_only');
-    var priceMaxField = document.querySelector('[name="price_max"]');
+    // ── Handle free_only checkbox ──
+    document.addEventListener('DOMContentLoaded', function () {
+        var freeOnlyCheckbox = document.getElementById('free_only');
+        var priceMaxField = document.querySelector('[name="price_max"]');
 
-    if (freeOnlyCheckbox && priceMaxField) {
-        freeOnlyCheckbox.addEventListener('change', function() {
-            priceMaxField.disabled = this.checked;
-            var currencySelect = document.querySelector('[name="price_currency"]');
-            if (currencySelect) currencySelect.disabled = this.checked;
-        });
-    }
+        if (freeOnlyCheckbox && priceMaxField) {
+            freeOnlyCheckbox.addEventListener('change', function () {
+                priceMaxField.disabled = this.checked;
+                var currencySelect = document.querySelector('[name="price_currency"]');
+                if (currencySelect) currencySelect.disabled = this.checked;
+            });
+        }
 
-    var setLocationBtn = document.getElementById('set-location-btn');
-    if (setLocationBtn) {
-        setLocationBtn.addEventListener('click', function() {
-            geocodeRadiusLocation();
-        });
-    }
-});
+        var setLocationBtn = document.getElementById('set-location-btn');
+        if (setLocationBtn) {
+            setLocationBtn.addEventListener('click', function () {
+                geocodeRadiusLocation();
+            });
+        }
+    });
 
-// ── Radius location geocoding ──
-function geocodeRadiusLocation() {
-    var input = document.getElementById('radius-location-input').value.trim();
-    var errEl = document.getElementById('radius-location-error');
-    function showLocationError(msg) {
-        if (!errEl) return;
-        if (errEl._hideTimeout) { clearTimeout(errEl._hideTimeout); errEl._hideTimeout = null; }
-        errEl.textContent = msg;
-        errEl.style.display = 'block';
-        errEl.style.opacity = '1';
+    // ── Radius location geocoding ──
+    function geocodeRadiusLocation() {
+        var input = document.getElementById('radius-location-input').value.trim();
+        var errEl = document.getElementById('radius-location-error');
 
-        errEl._hideTimeout = setTimeout(function() {
-            errEl.style.opacity = '0';
-
-            setTimeout(function() { errEl.style.display = 'none'; }, 350);
-            errEl._hideTimeout = null;
-        }, 4000);
-    }
-
-    if (!input) {
-        showLocationError('Please enter a location.');
-        return;
-    }
-
-    var radiusKmRaw = document.querySelector('[name="radius_km"]').value;
-    var radiusKm = parseFloat(radiusKmRaw);
-    if (!radiusKmRaw || isNaN(radiusKm)) {
-        document.querySelector('[name="radius_km"]').value = '10';
-        radiusKm = 10;
-    }
-    if (radiusKm < 1) {
-        showLocationError('Please enter a valid radius (minimum 1 km).');
-        return;
-    }
-
-    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(input))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var errEl = document.getElementById('radius-location-error');
-            if (data && data.length > 0) {
-                if (errEl) { if (errEl._hideTimeout) { clearTimeout(errEl._hideTimeout); errEl._hideTimeout = null; } errEl.style.opacity = '0'; setTimeout(function(){ errEl.style.display='none'; errEl.textContent=''; }, 200); }
-                document.getElementById('center_lat').value = data[0].lat;
-                document.getElementById('center_lng').value = data[0].lon;
-                document.getElementById('discover-form').submit();
-            } else {
-                if (errEl) { showLocationError('Location not found. Try a different search.'); }
+        function showLocationError(msg) {
+            if (!errEl) return;
+            if (errEl._hideTimeout) {
+                clearTimeout(errEl._hideTimeout);
+                errEl._hideTimeout = null;
             }
-        })
-        .catch(function() {
-            var errEl = document.getElementById('radius-location-error');
-            if (errEl) { showLocationError('Geocoding failed. Check your connection.'); }
-        });
-}
+            errEl.textContent = msg;
+            errEl.style.display = 'block';
+            errEl.style.opacity = '1';
+
+            errEl._hideTimeout = setTimeout(function () {
+                errEl.style.opacity = '0';
+
+                setTimeout(function () {
+                    errEl.style.display = 'none';
+                }, 350);
+                errEl._hideTimeout = null;
+            }, 4000);
+        }
+
+        if (!input) {
+            showLocationError('Please enter a location.');
+            return;
+        }
+
+        var radiusKmRaw = document.querySelector('[name="radius_km"]').value;
+        var radiusKm = parseFloat(radiusKmRaw);
+        if (!radiusKmRaw || isNaN(radiusKm)) {
+            document.querySelector('[name="radius_km"]').value = '10';
+            radiusKm = 10;
+        }
+        if (radiusKm < 1) {
+            showLocationError('Please enter a valid radius (minimum 1 km).');
+            return;
+        }
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(input))
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (data) {
+                var errEl = document.getElementById('radius-location-error');
+                if (data && data.length > 0) {
+                    if (errEl) {
+                        if (errEl._hideTimeout) {
+                            clearTimeout(errEl._hideTimeout);
+                            errEl._hideTimeout = null;
+                        }
+                        errEl.style.opacity = '0';
+                        setTimeout(function () {
+                            errEl.style.display = 'none';
+                            errEl.textContent = '';
+                        }, 200);
+                    }
+                    document.getElementById('center_lat').value = data[0].lat;
+                    document.getElementById('center_lng').value = data[0].lon;
+                    document.getElementById('discover-form').submit();
+                } else {
+                    if (errEl) {
+                        showLocationError('Location not found. Try a different search.');
+                    }
+                }
+            })
+            .catch(function () {
+                var errEl = document.getElementById('radius-location-error');
+                if (errEl) {
+                    showLocationError('Geocoding failed. Check your connection.');
+                }
+            });
+    }
 </script>
 {% endblock %}

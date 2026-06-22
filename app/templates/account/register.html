@@ -6,26 +6,28 @@
         <div class="auth-card">
             <h2 class="text-center">Create an account</h2>
             <p class="text-center text-muted mb-4">Join MeetingPoint — it's free</p>
-            <form method="POST" id="register-form">
+            <form id="register-form" method="POST">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, placeholder="Your name") }}
+                    {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, placeholder="Your
+                    name") }}
                     {% for error in form.name.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 <div class="mb-3">
                     {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-control", required=True, type="email", maxlength=150, placeholder="you@example.com") }}
+                    {{ form.email(class="form-control", required=True, type="email", maxlength=150,
+                    placeholder="you@example.com") }}
                     {% for error in form.email.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                    <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
                 </div>
                 {% set confirm_placeholder = "Repeat password" %}
                 {% include "shared/_password_fields.html" %}
                 <div class="mb-4 form-check">
-                    <input type="checkbox" class="form-check-input" id="terms_agree" required>
+                    <input class="form-check-input" id="terms_agree" required type="checkbox">
                     <label class="form-check-label" for="terms_agree">
                         I agree to the <a href="{{ url_for('main.terms') }}" target="_blank">Terms of Service</a>
                         and <a href="{{ url_for('main.privacy') }}" target="_blank">Privacy Policy</a>

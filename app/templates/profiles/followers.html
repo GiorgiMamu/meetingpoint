@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Followers — {{ user.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">{{ user.name }}'s followers</h2>
+        <p class="text-muted mb-0">{{ followers_count }} follower{{ '' if followers_count == 1 else 's' }}</p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('main.profile', user_id=user.id) }}">Back to
+        profile</a>
+</div>
+
+{% if followers %}
+<div class="list-group">
+    {% for follower in followers %}
+    <a class="list-group-item list-group-item-action" href="{{ url_for('main.profile', user_id=follower.id) }}">
+        <div class="d-flex align-items-center gap-2">
+            <div class="avatar-initials-sm">
+                {{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?' }}
+            </div>
+            <div>
+                <div class="fw-semibold">{{ follower.name }}</div>
+                {% if follower.location %}
+                <div class="text-muted small">{{ follower.location }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">👥</div>
+    <h5>No followers yet</h5>
+    <p>This user does not have followers yet.</p>
+</div>
+{% endif %}
+{% endblock %}

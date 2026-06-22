@@ -1,11 +1,14 @@
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Regexp
-from flask_wtf.file import FileField, FileAllowed
-from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField
-from wtforms.validators import Optional, NumberRange
-from app.models import User
+import html
+
 import bleach
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import TextAreaField, DateTimeLocalField, FloatField, IntegerField, SelectField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Regexp
+from wtforms.validators import Optional, NumberRange
+
+from app.models import User
 
 # bcrypt only considers the first 72 bytes of the password, the underlying
 # `bcrypt` package raises ValueError for longer passwords to avoid silent
@@ -19,8 +22,8 @@ BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
     f'Password is too long.'
 )
 
-def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
 
+def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
     # must pass 2 parameters
     def _validator(form, field):
         if not field.data:
@@ -39,7 +42,8 @@ def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str =
 def _sanitize(value):
     if value is None:
         return value
-    return bleach.clean(str(value).strip(), tags=[], strip=True)
+    cleaned = bleach.clean(str(value).strip(), tags=[], strip=True)
+    return html.unescape(cleaned)
 
 
 class SanitizedStringField(StringField):
@@ -162,7 +166,8 @@ class EventForm(FlaskForm):
         Length(max=255)
     ])
     photo = FileField('Event photo', validators=[
-        FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only.')
+        FileAllowed(['jpg', 'jpeg', 'png', 'webp'],
+                    'Supported formats are only the following: jpg, jpeg, png and webp.')
     ])
     capacity_min = IntegerField('Minimum capacity', validators=[
         Optional(),

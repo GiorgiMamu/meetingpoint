@@ -1,6 +1,7 @@
 import pytest
-import os
+
 from app import create_app, db as _db
+
 
 @pytest.fixture(scope='function')
 def app():
@@ -13,6 +14,7 @@ def app():
         _db.session.remove()
         _db.drop_all()
         _db.engine.dispose()
+
 
 @pytest.fixture(scope='function')
 def client(app):
