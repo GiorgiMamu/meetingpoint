@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Log #{{ log.id }} — MeetingPoint{% endblock %}
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('main.admin_logs') }}" class="btn btn-outline-secondary btn-sm">← Back to logs</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="section-title">Log #{{ log.id }}</h5>
+
+        <table class="table table-borderless mb-0">
+            <tr>
+                <th style="width:180px;">Action</th>
+                <td><code>{{ log.action }}</code></td>
+            </tr>
+            <tr>
+                <th>User</th>
+                <td>
+                    {% if log.user %}
+                        <a href="{{ url_for('main.profile', user_id=log.user.id) }}">{{ log.user.name }}</a>
+                        <span class="text-muted small">({{ log.user.email }})</span>
+                    {% else %}
+                        <span class="text-muted">Anonymous</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>IP address</th>
+                <td>{{ log.ip_address or '—' }}</td>
+            </tr>
+            <tr>
+                <th>Status code</th>
+                <td>
+                    {% if log.status_code %}
+                        {% if log.status_code >= 500 %}
+                            <span class="badge bg-danger">{{ log.status_code }}</span>
+                        {% elif log.status_code >= 400 %}
+                            <span class="badge bg-warning">{{ log.status_code }}</span>
+                        {% else %}
+                            <span class="badge bg-success">{{ log.status_code }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Timestamp</th>
+                <td>{{ log.timestamp.strftime('%B %d, %Y at %H:%M:%S') }}</td>
+            </tr>
+            <tr>
+                <th>User agent</th>
+                <td><small class="text-muted">{{ log.user_agent or '—' }}</small></td>
+            </tr>
+            {% if log.details %}
+            <tr>
+                <th>Details</th>
+                <td>
+                    <pre style="background:#f8f9fa; padding:1rem; border-radius:8px; font-size:0.8rem; white-space:pre-wrap; word-break:break-word;">{{ log.details }}</pre>
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

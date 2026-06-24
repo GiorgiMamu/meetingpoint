@@ -9,6 +9,8 @@ def app():
     app.config['RATELIMIT_ENABLED'] = False
 
     with app.app_context():
+        _db.drop_all()       # clean up any leftovers from a previously failed test
+
         _db.create_all()
         yield app
         _db.session.remove()

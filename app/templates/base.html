@@ -60,6 +60,8 @@
                         <li><a class="dropdown-item" href="{{ url_for('main.profile', user_id=current_user.id) }}">Profile</a>
                         </li>
                         <li><a class="dropdown-item" href="{{ url_for('main.my_events') }}">My events</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.host_dashboard') }}">Host dashboard</a></li>
+
                         <li><a class="dropdown-item" href="{{ url_for('main.history') }}">History</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('main.bookmarks') }}">Bookmarks</a></li>
                         <li><a class="dropdown-item" href="#">Settings</a></li>
@@ -70,6 +72,9 @@
                         <li><h6 class="dropdown-header">Admin panel</h6></li>
                         <li><a class="dropdown-item" href="{{ url_for('main.admin_users') }}">Manage users</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('main.admin_events') }}">Manage events</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.admin_reports') }}">Reports</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.admin_logs') }}">System logs</a></li>
+
                         {% endif %}
                         <li>
                             <hr class="dropdown-divider">

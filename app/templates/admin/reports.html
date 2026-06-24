@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">📋 Reported Content</h2>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                        <option value="reviewed" {% if status_filter == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                        <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="dismissed" {% if status_filter == 'dismissed' %}selected{% endif %}>Dismissed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="user" {% if report_type == 'user' %}selected{% endif %}>User Reports</option>
+                        <option value="event" {% if report_type == 'event' %}selected{% endif %}>Event Reports</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sort</label>
+                    <select name="sort" class="form-select">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reports Table -->
+    {% if reports %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Reporter</th>
+                            <th>Type</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Reported At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                            <tr>
+                                <td>#{{ report.id }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.profile', user_id=report.reporter.id) }}">
+                                        {{ report.reporter.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if report.reported_user_id %}
+                                        <span class="badge bg-info">User</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Event</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ report.reason }}</td>
+                                <td>
+                                    {% if report.status == 'open' %}
+                                        <span class="badge bg-danger">Open</span>
+                                    {% elif report.status == 'reviewed' %}
+                                        <span class="badge bg-warning">Reviewed</span>
+                                    {% elif report.status == 'resolved' %}
+                                        <span class="badge bg-success">Resolved</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Dismissed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ report.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.admin_report_detail', report_id=report.id) }}"
+                                       class="btn btn-sm btn-info">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.admin_reports', page=pagination.prev_num, status=status_filter, type=report_type, sort=sort_by) }}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num == pagination.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.admin_reports', page=page_num, status=status_filter, type=report_type, sort=sort_by) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.admin_reports', page=pagination.next_num, status=status_filter, type=report_type, sort=sort_by) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            No reports found matching your filters.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

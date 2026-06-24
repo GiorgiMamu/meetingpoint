@@ -5,7 +5,19 @@ Organized into sections: general, auth, events, profiles, pages.
 import logging
 import math
 from datetime import datetime
-
+from datetime import timedelta
+from app.models import Report, AuditLog
+from app.recommendations import (
+    get_recommendations,
+    get_mood_based_suggestions,
+    get_trending_events
+)
+from app.analytics import get_event_analytics, get_host_dashboard_metrics
+from app.forms import ReportForm
+from datetime import timedelta
+from app.models import Report, AuditLog
+from app.recommendations import get_recommendations, get_mood_based_suggestions, get_trending_events
+from app.analytics import get_event_analytics, get_host_dashboard_metrics
 from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort)
 from flask_login import login_user, logout_user, login_required, current_user
@@ -145,6 +157,7 @@ def login():
     """Log in an existing user."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(
@@ -164,11 +177,35 @@ def login():
                 return redirect(url_for('main.login'))
             login_user(user, remember=form.remember.data)
             logger.info(f'Login: {user.email}')
+
+            # Log successful login
+            from app.models import AuditLog
+            audit_log = AuditLog(
+                user_id=user.id,
+                action='login_success',
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string[:255] if request.user_agent else None,
+            )
+            db.session.add(audit_log)
+            db.session.commit()
+
             next_page = request.args.get('next')
             return redirect(next_page or url_for('main.index'))
         else:
+            # Log failed login attempt
+            from app.models import AuditLog
+            audit_log = AuditLog(
+                action='login_failed',
+                details=f'Email: {form.email.data}',
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string[:255] if request.user_agent else None,
+            )
+            db.session.add(audit_log)
+            db.session.commit()
+
             logger.warning(f'Failed login attempt for: {form.email.data}')
             flash('Invalid email or password.', 'danger')
+
     return render_template('account/login.html', form=form)
 
 
@@ -865,7 +902,31 @@ def not_found(e):
 
 @main.app_errorhandler(500)
 def server_error(e):
-    logger.error(f'Server error: {e}')
+    import traceback
+    from app.models import AuditLog
+    from flask import request
+    from flask_login import current_user
+
+    error_details = f"{str(e)}\n\nStack Trace:\n{traceback.format_exc()}"
+
+    # Log to file
+    logger.error(f'500 ERROR: {error_details}')
+
+    # Log to database if possible
+    try:
+        audit_log = AuditLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            action='error_500',
+            details=error_details[:2000],  # Truncate for DB
+            ip_address=request.remote_addr,
+            user_agent=request.user_agent.string[:255] if request.user_agent else None,
+            status_code=500
+        )
+        db.session.add(audit_log)
+        db.session.commit()
+    except Exception as db_error:
+        logger.warning(f'Failed to log 500 error to AuditLog: {db_error}')
+
     return render_template('errors/500.html'), 500
 
 
@@ -1398,3 +1459,358 @@ def clear_notifications():
     return redirect(url_for('main.notifications'))
 
 
+# ============================================================
+# REPORTING SYSTEM (USER-FACING)
+# ============================================================
+
+@main.route('/events/<int:event_id>/report', methods=['GET', 'POST'])
+@login_required
+@active_required
+def report_event(event_id):
+    """Report an inappropriate event."""
+    event = Event.query.get_or_404(event_id)
+
+    if current_user.id == event.host_id:
+        flash('You cannot report your own event.', 'info')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    from app.forms import ReportForm
+    form = ReportForm()
+
+    if form.validate_on_submit():
+        from app.models import Report
+
+        # Check for duplicate reports
+        existing = Report.query.filter_by(
+            reporter_id=current_user.id,
+            reported_event_id=event_id
+        ).first()
+
+        if existing and existing.status == 'open':
+            flash('You have already reported this event.', 'warning')
+            return redirect(url_for('main.event_detail', event_id=event_id))
+
+        report = Report(
+            reporter_id=current_user.id,
+            reported_event_id=event_id,
+            reason=form.reason.data,
+            description=sanitize(form.description.data)
+        )
+        db.session.add(report)
+        db.session.commit()
+
+        logger.info(f'Event reported: event_id={event_id} by user={current_user.id} reason={form.reason.data}')
+        flash('Thank you for reporting this event. Our admins will review it soon.', 'success')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
+    return render_template('events/report_event.html', form=form, event=event, report_type='event')
+
+
+@main.route('/users/<int:user_id>/report', methods=['GET', 'POST'])
+@login_required
+@active_required
+def report_user(user_id):
+    """Report a user for inappropriate behavior."""
+    reported_user = User.query.get_or_404(user_id)
+
+    if current_user.id == user_id:
+        flash('You cannot report yourself.', 'info')
+        return redirect(url_for('main.profile', user_id=user_id))
+
+    from app.forms import ReportForm
+    form = ReportForm()
+
+    if form.validate_on_submit():
+        from app.models import Report
+
+        # Check for duplicate reports
+        existing = Report.query.filter_by(
+            reporter_id=current_user.id,
+            reported_user_id=user_id
+        ).first()
+
+        if existing and existing.status == 'open':
+            flash('You have already reported this user.', 'warning')
+            return redirect(url_for('main.profile', user_id=user_id))
+
+        report = Report(
+            reporter_id=current_user.id,
+            reported_user_id=user_id,
+            reason=form.reason.data,
+            description=sanitize(form.description.data)
+        )
+        db.session.add(report)
+        db.session.commit()
+
+        logger.info(f'User reported: user_id={user_id} by user={current_user.id} reason={form.reason.data}')
+        flash('Thank you for reporting this user. Our admins will review it soon.', 'success')
+        return redirect(url_for('main.profile', user_id=user_id))
+
+    return render_template('events/report_event.html', form=form, user=reported_user, report_type='user')
+
+
+# ============================================================
+# HOST DASHBOARD & ANALYTICS
+# ============================================================
+
+@main.route('/dashboard')
+@login_required
+@active_required
+def host_dashboard():
+    """Host dashboard with aggregated metrics."""
+    # Check if user has any events
+    events = Event.query.filter_by(host_id=current_user.id).all()
+
+    if not events:
+        return render_template('dashboard/host_dashboard_empty.html', user=current_user)
+
+    from app.analytics import get_host_dashboard_metrics
+
+    metrics = get_host_dashboard_metrics(current_user.id)
+
+    return render_template('dashboard/host_dashboard.html',
+                           metrics=metrics,
+                           user=current_user)
+
+
+@main.route('/dashboard/event/<int:event_id>')
+@login_required
+@active_required
+@host_required
+def event_dashboard(event_id):
+    """Detailed analytics for a specific event."""
+    event = Event.query.get_or_404(event_id)
+
+    from app.analytics import get_event_analytics
+
+    analytics = get_event_analytics(event_id)
+
+    # Get pending participants for approval queue
+    pending = Participation.query.filter_by(
+        event_id=event_id,
+        status='pending'
+    ).all()
+
+    # Get approved participants
+    approved = Participation.query.filter_by(
+        event_id=event_id,
+        status='approved'
+    ).all()
+
+    return render_template('dashboard/event_analytics.html',
+                           event=event,
+                           analytics=analytics,
+                           pending_participants=pending,
+                           approved_participants=approved)
+
+
+# ============================================================
+# DISCOVER PAGE - RECOMMENDATIONS
+# ============================================================
+
+@main.route('/discover/recommended')
+def discover_recommended():
+    """
+    Discover page with personalized recommendations.
+    If user is logged in, show recommendations + mood-based suggestions.
+    Otherwise show trending events.
+    """
+    page = request.args.get('page', 1, type=int)
+    per_page = 12
+
+    if current_user.is_authenticated and current_user.is_active:
+        from app.recommendations import get_recommendations, get_mood_based_suggestions
+
+        recommendations = get_recommendations(current_user.id, limit=50)
+        mood_suggestions = get_mood_based_suggestions(current_user.id, limit=6)
+    else:
+        from app.recommendations import get_trending_events
+
+        recommendations = get_trending_events(limit=50)
+        mood_suggestions = []
+
+    # Pagination
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = recommendations[start:end]
+    total = len(recommendations)
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
+
+    categories = [
+        ('social', 'Social'),
+        ('sports', 'Sports'),
+        ('arts and culture', 'Arts & Culture'),
+        ('music', 'Music'),
+        ('food and drinks', 'Food & Drinks'),
+        ('outdoors', 'Outdoors'),
+        ('games', 'Games'),
+        ('education', 'Education'),
+        ('technology', 'Technology'),
+        ('wellness and health', 'Wellness & Health'),
+        ('travel', 'Travel'),
+        ('other', 'Other')
+    ]
+
+    return render_template('events/discover_recommended.html',
+                           events=paginated,
+                           mood_suggestions=mood_suggestions,
+                           total=total,
+                           page=page,
+                           total_pages=total_pages,
+                           has_prev=page > 1,
+                           has_next=page < total_pages,
+                           prev_num=page - 1,
+                           next_num=page + 1,
+                           categories=categories)
+
+
+# ============================================================
+# ADMIN PANEL - REPORTS
+# ============================================================
+
+@main.route('/admin/reports')
+@login_required
+@admin_required
+def admin_reports():
+    """View all reported content."""
+    from app.models import Report
+
+    status_filter = request.args.get('status', '')
+    report_type = request.args.get('type', '')
+    sort_by = request.args.get('sort', 'newest')
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    query = Report.query
+
+    # Apply filters
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+
+    if report_type == 'user':
+        query = query.filter(Report.reported_user_id.isnot(None))
+    elif report_type == 'event':
+        query = query.filter(Report.reported_event_id.isnot(None))
+
+    # Apply sorting
+    if sort_by == 'oldest':
+        query = query.order_by(Report.created_at.asc())
+    else:  # newest
+        query = query.order_by(Report.created_at.desc())
+
+    # Pagination
+    pagination = query.paginate(page=page, per_page=per_page)
+    reports = pagination.items
+
+    return render_template('admin/reports.html',
+                           reports=reports,
+                           status_filter=status_filter,
+                           report_type=report_type,
+                           sort_by=sort_by,
+                           pagination=pagination)
+
+
+@main.route('/admin/reports/<int:report_id>')
+@login_required
+@admin_required
+def admin_report_detail(report_id):
+    """View detailed report and take action."""
+    from app.models import Report
+
+    report = Report.query.get_or_404(report_id)
+
+    return render_template('admin/report_detail.html', report=report)
+
+
+@main.route('/admin/reports/<int:report_id>/update', methods=['POST'])
+@login_required
+@admin_required
+def admin_update_report(report_id):
+    """Update report status and notes."""
+    from app.models import Report
+
+    report = Report.query.get_or_404(report_id)
+
+    new_status = request.form.get('status')
+    admin_notes = sanitize(request.form.get('admin_notes', ''))
+
+    if new_status in ['open', 'reviewed', 'resolved', 'dismissed']:
+        report.status = new_status
+        report.reviewed_at = datetime.now()
+        report.reviewed_by_id = current_user.id
+        report.admin_notes = admin_notes
+        db.session.commit()
+
+        logger.info(f'Report updated: id={report_id} status={new_status} by admin={current_user.id}')
+        flash('Report updated successfully.', 'success')
+
+    return redirect(url_for('main.admin_report_detail', report_id=report_id))
+
+
+# ============================================================
+# ADMIN PANEL - SYSTEM LOGS
+# ============================================================
+
+@main.route('/admin/logs')
+@login_required
+@admin_required
+def admin_logs():
+    """View system audit logs."""
+    from app.models import AuditLog
+
+    action_filter = request.args.get('action', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    query = AuditLog.query
+
+    # Apply filters
+    if action_filter:
+        query = query.filter_by(action=action_filter)
+
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(AuditLog.timestamp >= date_from_obj)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(AuditLog.timestamp < date_to_obj)
+        except ValueError:
+            pass
+
+    # Sort by newest first
+    query = query.order_by(AuditLog.timestamp.desc())
+
+    # Pagination
+    pagination = query.paginate(page=page, per_page=per_page)
+    logs = pagination.items
+
+    # Get unique actions for filter dropdown
+    all_actions = db.session.query(AuditLog.action).distinct().all()
+    actions_list = [a[0] for a in all_actions]
+
+    return render_template('admin/logs.html',
+                           logs=logs,
+                           action_filter=action_filter,
+                           date_from=date_from,
+                           date_to=date_to,
+                           pagination=pagination,
+                           actions=actions_list)
+
+
+@main.route('/admin/logs/<int:log_id>')
+@login_required
+@admin_required
+def admin_log_detail(log_id):
+    """View detailed log entry."""
+    from app.models import AuditLog
+
+    log = AuditLog.query.get_or_404(log_id)
+
+    return render_template('admin/log_detail.html', log=log)

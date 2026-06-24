@@ -242,3 +242,48 @@ class EditProfileForm(FlaskForm):
     is_history_public = BooleanField('Public history')
     submit = SubmitField('Save changes')
 
+
+
+class ReportForm(FlaskForm):
+    """Form for users to report events or other users."""
+
+    reason = SelectField('Reason', choices=[
+        ('spam', 'Spam or misleading'),
+        ('inappropriate', 'Inappropriate content'),
+        ('harassment', 'Harassment or abuse'),
+        ('fraud', 'Fraud or scam'),
+        ('dangerous', 'Dangerous activity'),
+        ('other', 'Other reason'),
+    ], validators=[DataRequired()])
+
+    description = TextAreaField('Description', validators=[
+        DataRequired(),
+        Length(min=10, max=1000, message='Please provide at least 10 characters describing the issue.')
+    ])
+
+    submit = SubmitField('Submit Report')
+
+
+class AdminReportFilterForm(FlaskForm):
+    """Form for filtering reports in admin panel."""
+
+    status = SelectField('Status', choices=[
+        ('', 'All statuses'),
+        ('open', 'Open'),
+        ('reviewed', 'Reviewed'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ], validators=[Optional()])
+
+    report_type = SelectField('Type', choices=[
+        ('', 'All types'),
+        ('user', 'User report'),
+        ('event', 'Event report'),
+    ], validators=[Optional()])
+
+    sort_by = SelectField('Sort by', choices=[
+        ('newest', 'Newest first'),
+        ('oldest', 'Oldest first'),
+    ], validators=[Optional()])
+
+    submit = SubmitField('Filter')

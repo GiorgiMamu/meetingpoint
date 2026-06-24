@@ -1,5 +1,6 @@
 from datetime import datetime
-
+import json
+from enum import Enum
 from flask_login import UserMixin
 
 from app import db, login_manager
@@ -205,3 +206,84 @@ class Notification(db.Model):
     def __repr__(self):
         return f'<Notification user={self.user_id} type={self.type}>'
 
+
+
+
+class Report(db.Model):
+    """User reports for inappropriate content or behavior."""
+
+    __tablename__ = 'reports'
+    __table_args__ = (
+        db.Index('ix_reports_reporter_id', 'reporter_id'),
+        db.Index('ix_reports_reported_user_id', 'reported_user_id'),
+        db.Index('ix_reports_reported_event_id', 'reported_event_id'),
+        db.Index('ix_reports_status', 'status'),
+        db.Index('ix_reports_created_at', 'created_at'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reported_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reported_event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
+
+    reason = db.Column(db.String(100), nullable=False)  # "spam", "inappropriate", "fraud", "harassment", "other"
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='open')  # "open", "reviewed", "resolved", "dismissed"
+
+    admin_notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relationships
+    reporter = db.relationship('User', foreign_keys=[reporter_id], backref='reports_submitted')
+    reported_user = db.relationship('User', foreign_keys=[reported_user_id], backref='reports_received')
+    reported_event = db.relationship('Event', backref='reports')
+    reviewed_by = db.relationship('User', foreign_keys=[reviewed_by_id])
+
+    def __repr__(self):
+        return f'<Report id={self.id} status={self.status}>'
+
+
+class AuditLog(db.Model):
+    """System-wide audit log for security and debugging."""
+
+    __tablename__ = 'audit_logs'
+    __table_args__ = (
+        db.Index('ix_audit_logs_user_id', 'user_id'),
+        db.Index('ix_audit_logs_action', 'action'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    action = db.Column(db.String(100),
+                       nullable=False)  # "login_failed", "error_500", "report_submitted", "user_blocked", etc.
+    details = db.Column(db.Text)  # Stack trace, IP, extra context
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(255))
+    status_code = db.Column(db.Integer, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
+
+    user = db.relationship('User', backref='audit_logs')
+
+    def __repr__(self):
+        return f'<AuditLog {self.action} at {self.timestamp}>'
+
+
+class SystemMetric(db.Model):
+    """Track system-wide metrics for dashboards."""
+
+    __tablename__ = 'system_metrics'
+    __table_args__ = (
+        db.Index('ix_system_metrics_metric_name', 'metric_name'),
+        db.Index('ix_system_metrics_timestamp', 'timestamp'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    metric_name = db.Column(db.String(100), nullable=False)  # "total_users", "total_events", "avg_attendance", etc.
+    metric_value = db.Column(db.Float, nullable=False)
+    extra_data = db.Column(db.String(500))  # JSON string for extra data (renamed from 'metadata')
+    timestamp = db.Column(db.DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f'<SystemMetric {self.metric_name}={self.metric_value}>'

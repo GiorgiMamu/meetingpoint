@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{{ url_for('main.admin_reports') }}" class="btn btn-outline-secondary mb-3">← Back to Reports</a>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Report #{{ report.id }} Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Reporter:</strong></p>
+                            <a href="{{ url_for('main.profile', user_id=report.reporter.id) }}">
+                                {{ report.reporter.name }}
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ report.reporter.email }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong></p>
+                            {% if report.status == 'open' %}
+                                <span class="badge bg-danger">Open</span>
+                            {% elif report.status == 'reviewed' %}
+                                <span class="badge bg-warning">Reviewed</span>
+                            {% elif report.status == 'resolved' %}
+                                <span class="badge bg-success">Resolved</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Dismissed</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <p><strong>Reason:</strong></p>
+                        <p>{{ report.reason | title }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <p><strong>Description:</strong></p>
+                        <p>{{ report.description }}</p>
+                    </div>
+
+                    <hr>
+
+                    {% if report.reported_user_id %}
+                        <div class="mb-3">
+                            <p><strong>Reported User:</strong></p>
+                            <a href="{{ url_for('main.profile', user_id=report.reported_user.id) }}">
+                                {{ report.reported_user.name }}
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ report.reported_user.email }}</small>
+                        </div>
+                    {% endif %}
+
+                    {% if report.reported_event_id %}
+                        <div class="mb-3">
+                            <p><strong>Reported Event:</strong></p>
+                            <a href="{{ url_for('main.event_detail', event_id=report.reported_event.id) }}">
+                                {{ report.reported_event.title }}
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ report.reported_event.event_time.strftime('%B %d, %Y %H:%M') }}</small>
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <p><strong>Reported At:</strong></p>
+                        <p>{{ report.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Admin Actions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.admin_update_report', report_id=report.id) }}">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="open" {% if report.status == 'open' %}selected{% endif %}>Open</option>
+                                <option value="reviewed" {% if report.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                                <option value="resolved" {% if report.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                <option value="dismissed" {% if report.status == 'dismissed' %}selected{% endif %}>Dismissed</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Admin Notes</label>
+                            <textarea name="admin_notes" class="form-control" rows="4">{{ report.admin_notes or '' }}</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Update Report</button>
+                    </form>
+
+                    <hr>
+
+                    {% if report.reported_user_id %}
+                        <p class="small mb-2"><strong>Quick Actions:</strong></p>
+                        <a href="{{ url_for('main.toggle_block_user', user_id=report.reported_user_id) }}" 
+                           class="btn btn-sm btn-danger w-100 mb-2" onclick="return confirm('Block this user?')">
+                            Block User
+                        </a>
+                    {% endif %}
+
+                    {% if report.reported_event_id %}
+                        <p class="small mb-2"><strong>Quick Actions:</strong></p>
+                        <a href="{{ url_for('main.delete_event', event_id=report.reported_event_id) }}" 
+                           class="btn btn-sm btn-danger w-100 mb-2" onclick="return confirm('Delete this event?')">
+                            Delete Event
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if report.reviewed_by %}
+                <div class="card mt-3 bg-light">
+                    <div class="card-body">
+                        <p class="mb-2"><small><strong>Reviewed by:</strong></small></p>
+                        <p class="mb-0"><small>{{ report.reviewed_by.name }}</small></p>
+                        <p class="mb-0"><small class="text-muted">{{ report.reviewed_at.strftime('%B %d, %Y %H:%M') }}</small></p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

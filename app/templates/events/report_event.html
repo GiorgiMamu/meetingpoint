@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        {% if report_type == 'event' %}
+                            Report Event
+                        {% else %}
+                            Report User
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if report_type == 'event' %}
+                        <p class="text-muted">
+                            Reporting: <strong>{{ event.title }}</strong>
+                        </p>
+                    {% else %}
+                        <p class="text-muted">
+                            Reporting: <strong>{{ user.name }}</strong>
+                        </p>
+                    {% endif %}
+
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.reason.label(class="form-label") }}
+                            {% if form.reason.errors %}
+                                {{ form.reason(class="form-control is-invalid") }}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.reason.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.reason(class="form-control") }}
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {% if form.description.errors %}
+                                {{ form.description(class="form-control is-invalid", rows="5") }}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.description(class="form-control", rows="5", placeholder="Please describe the issue...") }}
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Minimum 10 characters required.
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-danger") }}
+                            <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-3 p-3 bg-light rounded">
+                <h6 class="mb-3">⚠️ Reporting Guidelines</h6>
+                <ul class="small mb-0">
+                    <li>Only report content that violates our policies</li>
+                    <li>Be specific and factual in your description</li>
+                    <li>Our team will review all reports within 48 hours</li>
+                    <li>False reports may result in account restrictions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
