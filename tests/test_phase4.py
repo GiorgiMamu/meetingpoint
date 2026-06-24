@@ -29,7 +29,7 @@ def create_event(app, host_id, approval_mode='automatic', title='Test Event'):
         event = Event(
             host_id=host_id,
             title=title,
-            event_time=datetime.utcnow() + timedelta(days=3),
+            event_time=datetime.now() + timedelta(days=3),
             category='social',
             is_public=True,
             approval_mode=approval_mode
@@ -409,7 +409,7 @@ def test_send_reminders_creates_notification_once(app):
         event = Event(
             host_id=host.id,
             title='Reminder Event',
-            event_time=datetime.utcnow() + timedelta(hours=24),
+            event_time=datetime.now() + timedelta(hours=24),
             category='social',
             is_public=True
         )
@@ -461,7 +461,7 @@ def test_invited_user_can_view_private_event(client, app):
         event = Event(
             host_id=host_id,
             title='Private Event',
-            event_time=datetime.utcnow() + timedelta(days=3),
+            event_time=datetime.now() + timedelta(days=3),
             category='social',
             is_public=False,
             approval_mode='manual'

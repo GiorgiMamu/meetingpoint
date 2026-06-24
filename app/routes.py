@@ -639,7 +639,7 @@ def my_events():
 @login_required
 def history():
     """Show past and upcoming events the user has participated in."""
-    now = datetime.utcnow()
+    now = datetime.now()
     participations = Participation.query.filter_by(
         user_id=current_user.id,
         status='approved'
@@ -1396,3 +1396,5 @@ def clear_notifications():
     Notification.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
     db.session.commit()
     return redirect(url_for('main.notifications'))
+
+

@@ -241,3 +241,4 @@ class EditProfileForm(FlaskForm):
     is_profile_public = BooleanField('Public profile')
     is_history_public = BooleanField('Public history')
     submit = SubmitField('Save changes')
+

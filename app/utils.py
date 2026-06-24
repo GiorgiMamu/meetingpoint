@@ -39,21 +39,29 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    if current_app.config.get('TESTING'):
-        return
-    sender = (current_app.config.get('MAIL_USERNAME') or
-              current_app.config.get('MAIL_DEFAULT_SENDER'))
+    sender = (
+        current_app.config.get('MAIL_USERNAME')
+        or current_app.config.get('MAIL_DEFAULT_SENDER')
+    )
+
     if not sender:
         import logging
-        logging.getLogger(__name__).warning(f'Email not sent to {to}: no sender configured.')
-        return
+        logging.getLogger(__name__).warning(
+            f'Email not sent to {to}: no sender configured.'
+        )
+        return None
+
     msg = Message(
-        subject,
+        subject=subject,
         sender=sender,
         recipients=[to],
         body=body
     )
-    mail.send(msg)
+
+    if not current_app.config.get('TESTING'):
+        mail.send(msg)
+
+    return msg
 
 
 def send_verification_email(user):
@@ -241,3 +249,4 @@ def convert_to_gel(amount, from_currency):
     rates = get_exchange_rates()
     rate = rates.get(from_currency.upper(), 1.0)
     return amount * rate
+

@@ -30,7 +30,7 @@ class User(UserMixin, db.Model):
     is_blocked = db.Column(db.Boolean, default=False)
     is_profile_public = db.Column(db.Boolean, default=True)
     is_history_public = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     password_reset_token = db.Column(db.String(255), nullable=True)
 
     events = db.relationship('Event', backref='host', lazy=True,
@@ -91,7 +91,7 @@ class Event(db.Model):
     currency = db.Column(db.String(10), default='GEL')
     approval_mode = db.Column(db.String(20), default='automatic')
     participant_list_visible = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     participations = db.relationship('Participation', backref='event', lazy=True,
                                      cascade='all, delete-orphan')
@@ -128,7 +128,7 @@ class Participation(db.Model):
         nullable=False
     )
     status = db.Column(db.String(20), default='pending')
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return f'<Participation user={self.user_id} event={self.event_id}>'
@@ -146,7 +146,7 @@ class Message(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return f'<Message event={self.event_id} user={self.user_id}>'
@@ -162,7 +162,7 @@ class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return f'<Bookmark user={self.user_id} event={self.event_id}>'
@@ -179,7 +179,7 @@ class Follow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return f'<Follow {self.follower_id} -> {self.followed_id}>'
@@ -199,8 +199,9 @@ class Notification(db.Model):
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     related_event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     actor_user = db.relationship('User', foreign_keys=[actor_user_id], lazy='joined')
 
     def __repr__(self):
         return f'<Notification user={self.user_id} type={self.type}>'
+

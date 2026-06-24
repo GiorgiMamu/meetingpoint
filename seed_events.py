@@ -59,7 +59,7 @@ EVENTS = [
         "host_id": 3,
         "title": "Kakheti Wine Tour: Cellar Hopping",
         "description": "Visit three family-owned wineries in the Alazani Valley. Taste amber wines straight from qvevri, walk the vineyards, and learn about ancient Georgian winemaking. Transport from Telavi provided. Lunch included.",
-        "event_time": datetime.utcnow() + timedelta(days=9, hours=10),
+        "event_time": datetime.now() + timedelta(days=9, hours=10),
         "location_text": "Telavi, Kakheti",
         "lat": 41.9200,
         "lng": 45.4767,

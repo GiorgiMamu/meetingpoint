@@ -23,7 +23,7 @@ def create_event_in_db(app, host_id, title='Test Event', category='social',
                        lat=41.6938, lng=44.8015, price=0.0,
                        capacity_min=2, capacity_max=10, mood_tags='chill'):
     with app.app_context():
-        future_time = datetime.utcnow() + timedelta(hours=2)
+        future_time = datetime.now() + timedelta(hours=2)
         event = Event(
             host_id=host_id,
             title=title,
@@ -93,8 +93,8 @@ def test_filter_by_group_size(client, app):
 def test_filter_by_date_from(client, app):
     uid = create_user(app)
     create_event_in_db(app, uid, title='Future Event')
-    tomorrow = (datetime.utcnow() + timedelta(days=1)).strftime('%Y-%m-%d')
-    far_future = (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d')
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    far_future = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
     response = client.get(f'/discover?date_from={far_future}')
     assert b'Future Event' not in response.data
 

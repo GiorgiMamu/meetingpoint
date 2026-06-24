@@ -83,7 +83,7 @@ def register_socket_events(socketio):
             event_id=event_id,
             user_id=current_user.id,
             content=content,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now()
         )
         db.session.add(msg)
         db.session.commit()

@@ -128,7 +128,7 @@ def test_delete_event_removes_bookmarks(client, app):
         event = Event(
             host_id=host_id,
             title='Bookmarked Event',
-            event_time=datetime.utcnow() + timedelta(hours=1)
+            event_time=datetime.now() + timedelta(hours=1)
         )
         db.session.add(event)
         db.session.commit()
