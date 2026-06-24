@@ -105,18 +105,20 @@
 
                     {% if report.reported_user_id %}
                         <p class="small mb-2"><strong>Quick Actions:</strong></p>
-                        <a href="{{ url_for('main.toggle_block_user', user_id=report.reported_user_id) }}" 
-                           class="btn btn-sm btn-danger w-100 mb-2" onclick="return confirm('Block this user?')">
-                            Block User
-                        </a>
+                        <form method="POST" action="{{ url_for('main.toggle_block_user', user_id=report.reported_user_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger w-100 mb-2"
+                                    onclick="return confirm('Block this user?')">Block user</button>
+                        </form>
                     {% endif %}
 
                     {% if report.reported_event_id %}
                         <p class="small mb-2"><strong>Quick Actions:</strong></p>
-                        <a href="{{ url_for('main.delete_event', event_id=report.reported_event_id) }}" 
-                           class="btn btn-sm btn-danger w-100 mb-2" onclick="return confirm('Delete this event?')">
-                            Delete Event
-                        </a>
+                        <form method="POST" action="{{ url_for('main.delete_event', event_id=report.reported_event_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger w-100 mb-2"
+                                    onclick="return confirm('Delete this event?')">Delete event</button>
+                        </form>
                     {% endif %}
                 </div>
             </div>

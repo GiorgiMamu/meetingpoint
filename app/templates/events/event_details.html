@@ -71,6 +71,8 @@
                 {% if not event.is_cancelled %}
                 <a class="btn btn-outline-primary w-100 mb-2"
                    href="{{ url_for('main.edit_event', event_id=event.id) }}">✏️ Edit event</a>
+                <a href="{{ url_for('main.event_dashboard', event_id=event.id) }}"
+                    class="btn btn-outline-secondary w-100 mb-2">📊 View analytics</a>
                 {% if event.host.role != 'admin' %}
                 <a class="btn btn-outline-secondary w-100 mb-2"
                    href="{{ url_for('main.share_event', event_id=event.id) }}">🔗 Share or invite</a>
@@ -175,7 +177,14 @@
             </div>
         </div>
         {% endif %}
-
+        {% if current_user.is_authenticated and current_user.id != event.host_id %}
+        <div class="card mt-3">
+            <div class="card-body">
+                <a href="{{ url_for('main.report_event', event_id=event.id) }}"
+                   class="btn btn-outline-danger w-100 btn-sm">🚩 Report event</a>
+            </div>
+        </div>
+        {% endif %}
         <!-- Participants list card -->
         {% if participants %}
         <div class="card mt-3">

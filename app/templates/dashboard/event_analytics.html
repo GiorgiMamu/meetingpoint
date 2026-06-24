@@ -120,17 +120,15 @@
                                         <td>{{ p.user.email }}</td>
                                         <td>{{ p.joined_at.strftime('%B %d, %Y %H:%M') }}</td>
                                         <td>
-                                            <form method="POST" style="display: inline;">
-                                                <a href="{{ url_for('main.approve_participant', event_id=event.id, user_id=p.user.id) }}" 
-                                                   class="btn btn-sm btn-success" onclick="return confirm('Approve this participant?')">
-                                                    ✓ Approve
-                                                </a>
+                                            <form method="POST" action="{{ url_for('main.approve_participant', event_id=event.id, user_id=p.user.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-success"
+                                                        onclick="return confirm('Approve this participant?')">✓ Approve</button>
                                             </form>
-                                            <form method="POST" style="display: inline;">
-                                                <a href="{{ url_for('main.decline_participant', event_id=event.id, user_id=p.user.id) }}" 
-                                                   class="btn btn-sm btn-danger" onclick="return confirm('Decline this participant?')">
-                                                    ✕ Decline
-                                                </a>
+                                            <form method="POST" action="{{ url_for('main.decline_participant', event_id=event.id, user_id=p.user.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-danger"
+                                                        onclick="return confirm('Decline this participant?')">✕ Decline</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -172,11 +170,10 @@
                                         <td>{{ p.user.email }}</td>
                                         <td>{{ p.joined_at.strftime('%B %d, %Y %H:%M') }}</td>
                                         <td>
-                                            <form method="POST" style="display: inline;">
-                                                <a href="{{ url_for('main.remove_participant', event_id=event.id, user_id=p.user.id) }}" 
-                                                   class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this participant?')">
-                                                    Remove
-                                                </a>
+                                            <form method="POST" action="{{ url_for('main.remove_participant', event_id=event.id, user_id=p.user.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Remove this participant?')">Remove</button>
                                             </form>
                                         </td>
                                     </tr>

@@ -55,16 +55,18 @@
                href="{{ url_for('main.edit_profile') }}">✏️ Edit profile</a>
             <a class="btn btn-outline-secondary btn-sm mt-2"
                href="{{ url_for('main.history') }}">📋 View full history</a>
-            {% elif current_user.is_authenticated and not current_user.is_admin() and not user.is_admin() %}
-            {% set is_following = current_user.following.filter_by(followed_id=user.id).first() %}
-            <form action="{{ url_for('main.follow_user', user_id=user.id) }}" class="mt-3" method="POST">
-                <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-                {% if is_following %}
-                <button class="btn btn-outline-secondary btn-sm" type="submit">Unfollow</button>
-                {% else %}
-                <button class="btn btn-outline-primary btn-sm" type="submit">Follow</button>
-                {% endif %}
-            </form>
+            {% elif current_user.is_authenticated %}
+                {% set is_following = current_user.following.filter_by(followed_id=user.id).first() %}
+                <form method="POST" action="{{ url_for('main.follow_user', user_id=user.id) }}" class="mt-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if is_following %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">Unfollow</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Follow</button>
+                    {% endif %}
+                </form>
+                <a href="{{ url_for('main.report_user', user_id=user.id) }}"
+                   class="btn btn-outline-danger btn-sm mt-2">🚩 Report user</a>
             {% endif %}
         </div>
     </div>
