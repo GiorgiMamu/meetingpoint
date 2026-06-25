@@ -14,6 +14,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from markupsafe import escape
 from config import config
+from flask_caching import Cache
+cache = Cache()
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -21,7 +23,11 @@ bcrypt = Bcrypt()
 csrf = CSRFProtect()
 mail = Mail()
 migrate = Migrate()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "600 per hour"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "600 per hour"],
+    storage_uri="memory://"
+)
 socketio = SocketIO()
 
 
@@ -34,6 +40,7 @@ def create_app(config_name='default'):
     bcrypt.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+    cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 60})
     if not app.config.get('TESTING'):
         migrate.init_app(app, db)
     limiter.init_app(app)

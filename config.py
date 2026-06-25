@@ -32,6 +32,8 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SESSION_COOKIE_SECURE = False
+    RATELIMIT_STORAGE_URI = 'memory://'
+
 
 
 class ProductionConfig(Config):

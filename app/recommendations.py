@@ -1,227 +1,182 @@
 """
 recommendations.py - Event recommendation engine
-Implements interest-based and history-based recommendations
+Implements interest-based, history-based, location and time recommendations
 """
 
 from datetime import datetime, timedelta
+
 from app import db
 from app.models import Event, User, Participation, Bookmark
 
 
-def parse_interests(interests_string):
-    """Parse comma-separated interests into list."""
-    if not interests_string:
+def parse_tags(text):
+    """Parse comma-separated tags into lowercase list."""
+    if not text:
         return []
-    return [i.strip().lower() for i in interests_string.split(',') if i.strip()]
+    return [t.strip().lower() for t in text.split(',') if t.strip()]
 
 
-def parse_mood_tags(mood_tags_string):
-    """Parse comma-separated mood tags into list."""
-    if not mood_tags_string:
-        return []
-    return [m.strip().lower() for m in mood_tags_string.split(',') if m.strip()]
+def haversine_km(lat1, lng1, lat2, lng2):
+    """Calculate distance in km between two coordinates."""
+    import math
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def calculate_interest_match_score(user_interests, event_category, event_mood_tags):
+def score_event(user, event, past_events, user_interests, user_locations, user_hours):
     """
-    Calculate interest match score (0-100).
+    Score a single event for a user. Returns float 0-100.
 
-    Higher if event category/mood matches user interests.
+    Scoring breakdown:
+    - Interest / mood tag match   : up to 35 points
+    - History category affinity   : up to 25 points
+    - Location proximity          : up to 20 points
+    - Time-of-day affinity        : up to 10 points
+    - Recency (newly created)     : up to 10 points
     """
-    if not user_interests:
-        return 0
+    score = 0.0
 
-    user_interests_set = set(parse_interests(user_interests))
-    event_mood_set = set(parse_mood_tags(event_mood_tags))
+    # ── 1. Interest / mood tag match (35 pts) ──────────────────────────────
+    event_tags = set(parse_tags(event.mood_tags))
+    event_category_words = set(parse_tags(event.category.replace(' ', ',')))
+    combined_event_tags = event_tags | event_category_words
 
-    score = 0
+    if user_interests and combined_event_tags:
+        matches = len(user_interests & combined_event_tags)
+        partial = sum(
+            1 for ui in user_interests
+            for et in combined_event_tags
+            if ui in et or et in ui
+        )
+        score += min(35, matches * 15 + partial * 5)
 
-    # Category matching (weight: 60%)
-    if event_category:
-        event_category_lower = event_category.lower()
-        for interest in user_interests_set:
-            if event_category_lower.startswith(interest[:3]) or interest in event_category_lower:
-                score += 60
-                break
+    # ── 2. History category affinity (25 pts) ──────────────────────────────
+    if past_events:
+        category_counts = {}
+        past_tags = set()
+        for pe in past_events:
+            if pe.category:
+                category_counts[pe.category] = category_counts.get(pe.category, 0) + 1
+            past_tags.update(parse_tags(pe.mood_tags))
 
-    # Mood tag matching (weight: 40%)
-    if event_mood_set:
-        matching_moods = event_mood_set & user_interests_set
-        if matching_moods:
-            score += min(40, len(matching_moods) * 15)
+        # Category match
+        if event.category in category_counts:
+            freq = min(category_counts[event.category], 5)
+            score += freq * 3  # up to 15 pts
 
-    return min(100, score)
+        # Past mood tag overlap
+        if event_tags & past_tags:
+            score += min(10, len(event_tags & past_tags) * 5)
 
-
-def calculate_history_match_score(user_id, event):
-    """
-    Calculate history match score (0-100).
-
-    Based on user's past participation patterns.
-    """
-    user = User.query.get(user_id)
-    if not user:
-        return 0
-
-    score = 0
-
-    # Get user's past participations
-    past_participations = db.session.query(Event).join(
-        Participation
-    ).filter(
-        Participation.user_id == user_id,
-        Participation.status == 'approved',
-        Event.event_time < datetime.now()
-    ).all()
-
-    if not past_participations:
-        return 0
-
-    # Calculate category affinity
-    category_counts = {}
-    for past_event in past_participations:
-        if past_event.category:
-            category_counts[past_event.category] = category_counts.get(past_event.category, 0) + 1
-
-    if event.category in category_counts:
-        score += 50 * (min(category_counts[event.category], 3) / 3)  # Max 50 points
-
-    # Calculate location proximity affinity
-    user_attended_locations = [(e.lat, e.lng) for e in past_participations if e.lat and e.lng]
-    if user_attended_locations and event.lat and event.lng:
-        # Calculate average distance to past locations
+    # ── 3. Location proximity (20 pts) ─────────────────────────────────────
+    if user_locations and event.lat and event.lng:
         distances = [
-            ((event.lat - loc[0]) ** 2 + (event.lng - loc[1]) ** 2) ** 0.5
-            for loc in user_attended_locations
+            haversine_km(event.lat, event.lng, lat, lng)
+            for lat, lng in user_locations
         ]
-        avg_distance = sum(distances) / len(distances)
-
-        # Prefer nearby events (max 30 points)
-        if avg_distance < 0.1:  # ~10km
-            score += 30
-        elif avg_distance < 0.5:  # ~50km
+        min_dist = min(distances)
+        if min_dist < 5:
+            score += 20
+        elif min_dist < 15:
             score += 15
+        elif min_dist < 30:
+            score += 10
+        elif min_dist < 60:
+            score += 5
 
-    # Time of day affinity
-    past_times = [e.event_time.hour for e in past_participations if e.event_time]
-    if past_times and event.event_time:
+    # ── 4. Time-of-day affinity (10 pts) ───────────────────────────────────
+    if user_hours and event.event_time:
         event_hour = event.event_time.hour
-        time_matches = sum(1 for t in past_times if abs(t - event_hour) < 3)
+        close_hours = sum(1 for h in user_hours if abs(h - event_hour) <= 2)
+        score += min(10, close_hours * 2)
 
-        if time_matches:
-            score += min(20, time_matches * 5)  # Max 20 points
+    # ── 5. Recency of event creation (10 pts) ──────────────────────────────
+    days_old = max(0, (datetime.now() - event.created_at).days)
+    score += max(0, 10 - days_old)
 
-    return min(100, score)
+    return min(100.0, score)
 
 
-def get_recommendations(user_id, limit=10, exclude_bookmarked=True):
+def get_recommendations(user_id, limit=12, exclude_bookmarked=True):
     """
-    Get event recommendations for a user.
-
-    Combines:
-    1. Interest-based recommendations (40% weight)
-    2. History-based recommendations (40% weight)
-    3. Popularity/recency (20% weight)
-
-    Args:
-        user_id: User ID
-        limit: Number of recommendations
-        exclude_bookmarked: If True, exclude already bookmarked events
-
-    Returns:
-        List of Event objects sorted by recommendation score
+    Return up to `limit` recommended upcoming public events for the user,
+    sorted by relevance score descending.
     """
     user = User.query.get(user_id)
     if not user:
         return []
 
-    # Get user's already joined and bookmarked events
-    user_events = db.session.query(Event.id).join(
-        Participation
-    ).filter(
-        Participation.user_id == user_id,
-        Event.is_public.is_(True)
-    ).all()
-    user_event_ids = {e[0] for e in user_events}
-
+    # Events already joined or bookmarked
+    joined_ids = {
+        p.event_id for p in Participation.query.filter_by(user_id=user_id).all()
+    }
     if exclude_bookmarked:
-        bookmarked_events = Bookmark.query.filter_by(user_id=user_id).all()
-        bookmarked_ids = {b.event_id for b in bookmarked_events}
-        user_event_ids.update(bookmarked_ids)
+        bookmarked_ids = {
+            b.event_id for b in Bookmark.query.filter_by(user_id=user_id).all()
+        }
+        joined_ids.update(bookmarked_ids)
 
-    # Get all public, upcoming events not already joined
     now = datetime.now()
+
+    # Candidate events
     candidates = Event.query.filter(
         Event.is_public.is_(True),
         Event.is_cancelled.is_(False),
         Event.event_time > now,
-        ~Event.id.in_(user_event_ids) if user_event_ids else True
+        ~Event.id.in_(joined_ids) if joined_ids else True
     ).all()
 
     if not candidates:
         return []
 
-    # Score each event
-    scored_events = []
+    # Build user context
+    user_interests = set(parse_tags(user.interests))
 
-    for event in candidates:
-        # Calculate individual scores
-        interest_score = calculate_interest_match_score(
-            user.interests,
-            event.category,
-            event.mood_tags
-        )
+    past_events = db.session.query(Event).join(Participation).filter(
+        Participation.user_id == user_id,
+        Participation.status == 'approved',
+        Event.event_time < now
+    ).all()
 
-        history_score = calculate_history_match_score(user_id, event)
+    user_locations = [
+        (e.lat, e.lng) for e in past_events if e.lat and e.lng
+    ]
 
-        # Popularity score (participant count)
-        participant_count = Participation.query.filter_by(
-            event_id=event.id,
-            status='approved'
-        ).count()
-        popularity_score = min(100, participant_count * 5)
+    user_hours = [
+        e.event_time.hour for e in past_events if e.event_time
+    ]
 
-        # Recency bonus (newer events slightly higher)
-        days_old = (datetime.now() - event.created_at).days
-        recency_score = max(0, 100 - (days_old * 2))
-
-        # Weighted combination
-        final_score = (
-                interest_score * 0.40 +
-                history_score * 0.40 +
-                popularity_score * 0.15 +
-                recency_score * 0.05
-        )
-
-        scored_events.append((event, final_score))
-
-    # Sort by score descending
-    scored_events.sort(key=lambda x: x[1], reverse=True)
-
-    return [event for event, score in scored_events[:limit]]
+    # Score and sort
+    scored = [
+        (event, score_event(user, event, past_events, user_interests, user_locations, user_hours))
+        for event in candidates
+    ]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return [(event, score) for event, score in scored[:limit]]  # now returns tuples
 
 
 def get_mood_based_suggestions(user_id, limit=6):
     """
-    Get mood-based event suggestions for Discover page.
-
-    Returns events matching user interests sorted by mood relevance.
+    Return events matching user's interests/mood tags.
+    Falls back to recent events if no interests set.
     """
     user = User.query.get(user_id)
+    now = datetime.now()
+
     if not user or not user.interests:
-        # Return popular upcoming events if user has no interests
-        now = datetime.now()
         return Event.query.filter(
             Event.is_public.is_(True),
             Event.is_cancelled.is_(False),
             Event.event_time > now
         ).order_by(Event.created_at.desc()).limit(limit).all()
 
-    user_interests = parse_interests(user.interests)
-
-    # Get events with matching moods or categories
-    now = datetime.now()
-    matching_events = []
+    user_interests = parse_tags(user.interests)
+    seen = set()
+    results = []
 
     for interest in user_interests:
         events = Event.query.filter(
@@ -233,43 +188,31 @@ def get_mood_based_suggestions(user_id, limit=6):
                 Event.mood_tags.ilike(f'%{interest}%')
             )
         ).all()
-        matching_events.extend(events)
+        for e in events:
+            if e.id not in seen:
+                seen.add(e.id)
+                results.append(e)
+        if len(results) >= limit:
+            break
 
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_events = []
-    for event in matching_events:
-        if event.id not in seen:
-            seen.add(event.id)
-            unique_events.append(event)
-
-    return unique_events[:limit]
+    return results[:limit]
 
 
-def get_trending_events(limit=6):
-    """
-    Get trending events based on recent joins and engagement.
-
-    Used for Discover page suggestions.
-    """
+def get_trending_events(limit=12):
+    """Return events with most joins in the last 7 days."""
     now = datetime.now()
     week_ago = now - timedelta(days=7)
 
-    # Get events with most joins in the last week
     trending = db.session.query(
         Event,
         db.func.count(Participation.id).label('recent_joins')
-    ).outerjoin(
-        Participation
-    ).filter(
+    ).outerjoin(Participation).filter(
         Event.is_public.is_(True),
         Event.is_cancelled.is_(False),
         Event.event_time > now,
         Participation.joined_at >= week_ago
-    ).group_by(
-        Event.id
-    ).order_by(
+    ).group_by(Event.id).order_by(
         db.desc('recent_joins')
     ).limit(limit).all()
 
-    return [event for event, count in trending]
+    return [event for event, _ in trending]

@@ -63,7 +63,7 @@
                         {% elif n.type == 'approval' and n.related_event %}
                         Your request to join "<strong>{{ n.related_event.title|display }}</strong>" has been approved.
                         {% elif n.type == 'declined' and n.related_event %}
-                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" was declined.
+                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" was rejected.
                         {% elif n.type == 'cancellation' and n.related_event %}
                         "<strong>{{ n.related_event.title|display }}</strong>" has been cancelled.
                         {% else %}
@@ -86,7 +86,7 @@
                         <form action="{{ url_for('main.decline_participant', event_id=n.related_event_id, user_id=n.actor_user_id) }}"
                               method="POST">
                             <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-                            <button class="btn btn-sm btn-outline-danger" type="submit">Decline</button>
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Reject</button>
                         </form>
                         {% endif %}
 

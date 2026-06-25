@@ -70,7 +70,7 @@
 
 {% if events %}
     <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for event in events %}
+        {% for event, score in events %}
         <div class="col">
             <div class="card card-event h-100">
                 {% if event.photo %}
@@ -91,6 +91,11 @@
                     {% endif %}
                     <div class="d-flex flex-wrap gap-1 mt-2">
                         <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
+
+                        {% if current_user.is_authenticated %}
+                            <span class="badge bg-info">{{ "%.0f"|format(score) }}% match</span>
+                        {% endif %}
+
                         {% if event.price and event.price > 0 %}
                             <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
                         {% else %}
@@ -107,6 +112,7 @@
         {% endfor %}
     </div>
 
+    {% if total_pages > 1 %}
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
             {% if has_prev %}
@@ -124,6 +130,7 @@
             {% endif %}
         </ul>
     </nav>
+    {% endif %}
 {% else %}
     <div class="empty-state">
         <div class="empty-state-icon">✨</div>

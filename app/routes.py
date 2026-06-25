@@ -10,7 +10,7 @@ from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort)
 from flask_login import login_user, logout_user, login_required, current_user
 
-from app import db, bcrypt, limiter
+from app import db, bcrypt, limiter, cache
 from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
                        ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_PASSWORD_TOO_LONG_MESSAGE, ReportForm)
@@ -475,7 +475,8 @@ def cancel_event(event_id):
 @limiter.limit("60 per minute")
 def discover():
     """
-    Discover page — lists all public events with keyword, category,
+    Discover page with caching for identical search queries.
+    Lists all public events with keyword, category,
     date, mood tag, group size, price and location radius filters.
     Logs all search queries and filter usage for analytics.
     """
@@ -496,14 +497,30 @@ def discover():
 
     # Log all search queries and filters for analytics/debugging
     active_filters = {k: v for k, v in {
-        'keyword': keyword, 'category': category,
-        'date_from': date_from, 'date_to': date_to,
-        'mood': mood, 'size_min': size_min, 'size_max': size_max,
-        'price_max': price_max, 'free_only': free_only,
+        'keyword': keyword,
+        'category': category,
+        'date_from': date_from,
+        'date_to': date_to,
+        'mood': mood,
+        'size_min': size_min,
+        'size_max': size_max,
+        'price_max': price_max,
+        'free_only': free_only,
         'radius_km': radius_km
     }.items() if v}
+
     if active_filters:
         logger.info(f'Search query: {active_filters}')
+
+    # Cache identical non-radius searches
+    cache_key = (
+        f"discover:{keyword}:{category}:{date_from}:{date_to}:"
+        f"{mood}:{size_min}:{size_max}:{price_max}:{free_only}:{page}"
+    )
+
+    cached = cache.get(cache_key)
+    if cached and not (radius_km and center_lat and center_lng):
+        return cached
 
     query = Event.query.filter_by(is_public=True)
 
@@ -516,24 +533,33 @@ def discover():
                 Event.location_text.ilike(f'%{keyword}%')
             )
         )
+
     if category:
         query = query.filter_by(category=category)
+
     if mood:
         query = query.filter(Event.mood_tags.ilike(f'%{mood}%'))
+
     if date_from:
         try:
             query = query.filter(
-                Event.event_time >= datetime.strptime(date_from, '%Y-%m-%d'))
+                Event.event_time >= datetime.strptime(date_from, '%Y-%m-%d')
+            )
         except ValueError:
             pass
+
     if date_to:
         try:
             query = query.filter(
-                Event.event_time <= datetime.strptime(date_to, '%Y-%m-%d'))
+                Event.event_time <= datetime.strptime(date_to, '%Y-%m-%d')
+            )
         except ValueError:
             pass
+
     if free_only:
-        query = query.filter(db.or_(Event.price == 0.0, Event.price.is_(None)))
+        query = query.filter(
+            db.or_(Event.price == 0.0, Event.price.is_(None))
+        )
     elif price_max:
         try:
             price_max_float = float(price_max)
@@ -541,11 +567,13 @@ def discover():
             query = query.filter(Event.price <= price_max_gel)
         except ValueError:
             pass
+
     if size_min:
         try:
             query = query.filter(Event.capacity_max >= int(size_min))
         except ValueError:
             pass
+
     if size_max:
         try:
             query = query.filter(Event.capacity_min <= int(size_max))
@@ -564,7 +592,10 @@ def discover():
                 float(center_lng),
                 float(radius_km)
             )
-            logger.info(f'Radius filter: {radius_km}km from ({center_lat},{center_lng}) -> {len(all_events)} results')
+            logger.info(
+                f'Radius filter: {radius_km}km from '
+                f'({center_lat},{center_lng}) -> {len(all_events)} results'
+            )
         except ValueError:
             pass
 
@@ -591,30 +622,37 @@ def discover():
         ('other', 'Other')
     ]
 
-    return render_template('events/discover.html',
-                           events=paginated_events,
-                           total=total,
-                           page=page,
-                           total_pages=total_pages,
-                           has_prev=page > 1,
-                           has_next=page < total_pages,
-                           prev_num=page - 1,
-                           next_num=page + 1,
-                           categories=categories,
-                           keyword=keyword,
-                           selected_category=category,
-                           date_from=date_from,
-                           date_to=date_to,
-                           mood=mood,
-                           size_min=size_min,
-                           size_max=size_max,
-                           price_max=price_max,
-                           price_currency=price_currency,
-                           free_only=free_only,
-                           radius_km=radius_km,
-                           center_lat=center_lat,
-                           center_lng=center_lng)
+    result = render_template(
+        'events/discover.html',
+        events=paginated_events,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+        prev_num=page - 1,
+        next_num=page + 1,
+        categories=categories,
+        keyword=keyword,
+        selected_category=category,
+        date_from=date_from,
+        date_to=date_to,
+        mood=mood,
+        size_min=size_min,
+        size_max=size_max,
+        price_max=price_max,
+        price_currency=price_currency,
+        free_only=free_only,
+        radius_km=radius_km,
+        center_lat=center_lat,
+        center_lng=center_lng
+    )
 
+    # Radius search is not cached because it depends on dynamic coordinates
+    if not (radius_km and center_lat and center_lng):
+        cache.set(cache_key, result, timeout=60)
+
+    return result
 
 # ============================================================
 # BOOKMARKS
@@ -1106,6 +1144,19 @@ def approve_participant(event_id, user_id):
         return redirect(request.referrer or url_for('main.event_chat', event_id=event_id))
 
     event = Event.query.get_or_404(event_id)
+
+    if event.is_cancelled:
+        flash('Cannot approve participants for a cancelled event.', 'danger')
+        return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
+    if event.capacity_max:
+        current_approved = Participation.query.filter_by(
+            event_id=event_id, status='approved'
+        ).count()
+        if current_approved >= event.capacity_max:
+            flash(f'Cannot approve — event is already at full capacity ({event.capacity_max}).', 'danger')
+            return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
+
     participation.status = 'approved'
 
     notification = Notification(
@@ -1158,7 +1209,7 @@ def decline_participant(event_id, user_id):
     notification = Notification(
         user_id=user_id,
         type='declined',
-        message=f'Your request to join "{event.title}" was declined.',
+        message=f'Your request to join "{event.title}" was rejected.',
         related_event_id=event_id
     )
     db.session.add(notification)
@@ -1171,8 +1222,8 @@ def decline_participant(event_id, user_id):
     ).update({'is_read': True}, synchronize_session=False)
     db.session.commit()
 
-    logger.info(f'Participant declined: user={user_id} event={event_id}')
-    flash('Participant declined.', 'info')
+    logger.info(f'Participant rejected: user={user_id} event={event_id}')
+    flash('Participant rejected.', 'info')
     return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
 
 
@@ -1607,24 +1658,6 @@ def discover_recommended():
     page = request.args.get('page', 1, type=int)
     per_page = 12
 
-    if current_user.is_authenticated and current_user.is_active:
-        from app.recommendations import get_recommendations, get_mood_based_suggestions
-
-        recommendations = get_recommendations(current_user.id, limit=50)
-        mood_suggestions = get_mood_based_suggestions(current_user.id, limit=6)
-    else:
-        from app.recommendations import get_trending_events
-
-        recommendations = get_trending_events(limit=50)
-        mood_suggestions = []
-
-    # Pagination
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated = recommendations[start:end]
-    total = len(recommendations)
-    total_pages = math.ceil(total / per_page) if total > 0 else 1
-
     categories = [
         ('social', 'Social'),
         ('sports', 'Sports'),
@@ -1637,21 +1670,47 @@ def discover_recommended():
         ('technology', 'Technology'),
         ('wellness and health', 'Wellness & Health'),
         ('travel', 'Travel'),
-        ('other', 'Other')
+        ('other', 'Other'),
     ]
+    category_labels = dict(categories)
 
-    return render_template('events/discover_recommended.html',
-                           events=paginated,
-                           mood_suggestions=mood_suggestions,
-                           total=total,
-                           page=page,
-                           total_pages=total_pages,
-                           has_prev=page > 1,
-                           has_next=page < total_pages,
-                           prev_num=page - 1,
-                           next_num=page + 1,
-                           categories=categories)
+    if current_user.is_authenticated and current_user.is_active:
+        from app.recommendations import get_recommendations, get_mood_based_suggestions
 
+        recommendations  = get_recommendations(current_user.id, limit=per_page * 10)
+        mood_suggestions = get_mood_based_suggestions(current_user.id, limit=6)
+
+        # Remove events that already appear in the main recommendations list
+        rec_ids = {e.id for e, s in recommendations}
+        mood_suggestions = [e for e in mood_suggestions if e.id not in rec_ids]
+    else:
+        from app.recommendations import get_trending_events
+
+        recommendations = [
+            (event, 0)
+            for event in get_trending_events(limit=per_page * 10)
+        ]
+        mood_suggestions = []
+
+    # Pagination
+    total       = len(recommendations)
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    start       = (page - 1) * per_page
+    paginated   = recommendations[start:start + per_page]
+
+    return render_template(
+        'events/discover_recommended.html',
+        events=paginated,
+        mood_suggestions=mood_suggestions,
+        category_labels=category_labels,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+        prev_num=page - 1,
+        next_num=page + 1,
+    )
 
 # ============================================================
 # ADMIN PANEL - REPORTS
