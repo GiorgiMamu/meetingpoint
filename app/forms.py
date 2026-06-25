@@ -18,9 +18,8 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 # for passwords containing emojis or some non-ASCII characters
 BCRYPT_MAX_PASSWORD_CHARS = 72
 
-BCRYPT_PASSWORD_TOO_LONG_MESSAGE = (
-    f'Password is too long.'
-)
+
+BCRYPT_PASSWORD_TOO_LONG_MESSAGE = 'Password is too long.'
 
 
 def bcrypt_max_bytes(max_bytes: int = BCRYPT_MAX_PASSWORD_BYTES, encoding: str = 'utf-8'):
@@ -243,10 +242,8 @@ class EditProfileForm(FlaskForm):
     submit = SubmitField('Save changes')
 
 
-
 class ReportForm(FlaskForm):
     """Form for users to report events or other users."""
-
     reason = SelectField('Reason', choices=[
         ('spam', 'Spam or misleading'),
         ('inappropriate', 'Inappropriate content'),

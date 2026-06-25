@@ -1,8 +1,5 @@
 from datetime import datetime
-import json
-from enum import Enum
 from flask_login import UserMixin
-
 from app import db, login_manager
 
 
@@ -205,8 +202,6 @@ class Notification(db.Model):
 
     def __repr__(self):
         return f'<Notification user={self.user_id} type={self.type}>'
-
-
 
 
 class Report(db.Model):

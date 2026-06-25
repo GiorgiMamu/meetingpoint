@@ -10,8 +10,7 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, placeholder="Your
-                    name") }}
+                    {{ form.name(class="form-control", required=True, minlength=2, maxlength=100, placeholder="Your name") }}
                     {% for error in form.name.errors %}
                     <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}

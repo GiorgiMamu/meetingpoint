@@ -3,9 +3,7 @@ recommendations.py - Event recommendation engine
 Implements interest-based and history-based recommendations
 """
 
-import json
 from datetime import datetime, timedelta
-
 from app import db
 from app.models import Event, User, Participation, Bookmark
 
@@ -142,7 +140,7 @@ def get_recommendations(user_id, limit=10, exclude_bookmarked=True):
         Participation
     ).filter(
         Participation.user_id == user_id,
-        Event.is_public == True
+        Event.is_public.is_(True)
     ).all()
     user_event_ids = {e[0] for e in user_events}
 
@@ -154,8 +152,8 @@ def get_recommendations(user_id, limit=10, exclude_bookmarked=True):
     # Get all public, upcoming events not already joined
     now = datetime.now()
     candidates = Event.query.filter(
-        Event.is_public == True,
-        Event.is_cancelled == False,
+        Event.is_public.is_(True),
+        Event.is_cancelled.is_(False),
         Event.event_time > now,
         ~Event.id.in_(user_event_ids) if user_event_ids else True
     ).all()
@@ -214,8 +212,8 @@ def get_mood_based_suggestions(user_id, limit=6):
         # Return popular upcoming events if user has no interests
         now = datetime.now()
         return Event.query.filter(
-            Event.is_public == True,
-            Event.is_cancelled == False,
+            Event.is_public.is_(True),
+            Event.is_cancelled.is_(False),
             Event.event_time > now
         ).order_by(Event.created_at.desc()).limit(limit).all()
 
@@ -227,8 +225,8 @@ def get_mood_based_suggestions(user_id, limit=6):
 
     for interest in user_interests:
         events = Event.query.filter(
-            Event.is_public == True,
-            Event.is_cancelled == False,
+            Event.is_public.is_(True),
+            Event.is_cancelled.is_(False),
             Event.event_time > now,
             db.or_(
                 Event.category.ilike(f'%{interest}%'),
@@ -264,8 +262,8 @@ def get_trending_events(limit=6):
     ).outerjoin(
         Participation
     ).filter(
-        Event.is_public == True,
-        Event.is_cancelled == False,
+        Event.is_public.is_(True),
+        Event.is_cancelled.is_(False),
         Event.event_time > now,
         Participation.joined_at >= week_ago
     ).group_by(

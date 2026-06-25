@@ -43,8 +43,8 @@ def send_reminders(app):
         upcoming = Event.query.filter(
             Event.event_time >= window_start,
             Event.event_time <= window_end,
-            Event.is_cancelled == False,
-            Event.is_public == True
+            Event.is_cancelled.is_(False),
+            Event.is_public.is_(True)
         ).all()
 
         for event in upcoming:

@@ -4,19 +4,7 @@ Organized into sections: general, auth, events, profiles, pages.
 """
 import logging
 import math
-from datetime import datetime
-from datetime import timedelta
-from app.models import Report, AuditLog
-from app.recommendations import (
-    get_recommendations,
-    get_mood_based_suggestions,
-    get_trending_events
-)
-from app.analytics import get_event_analytics, get_host_dashboard_metrics
-from app.forms import ReportForm
-from datetime import timedelta
-from app.models import Report, AuditLog
-from app.recommendations import get_recommendations, get_mood_based_suggestions, get_trending_events
+from datetime import datetime, timedelta
 from app.analytics import get_event_analytics, get_host_dashboard_metrics
 from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort)
@@ -25,7 +13,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt, limiter
 from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
-                       ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_PASSWORD_TOO_LONG_MESSAGE)
+                       ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_PASSWORD_TOO_LONG_MESSAGE, ReportForm)
 from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
@@ -189,7 +177,11 @@ def login():
             db.session.add(audit_log)
             db.session.commit()
 
+            from urllib.parse import urlparse
+
             next_page = request.args.get('next')
+            if next_page and urlparse(next_page).netloc != '':
+                next_page = None
             return redirect(next_page or url_for('main.index'))
         else:
             # Log failed login attempt
@@ -286,6 +278,7 @@ def reset_password(token):
 @login_required
 @active_required
 @not_blocked_required
+@limiter.limit("10 per minute")
 def create_event():
     """Create a new event. Host only."""
     form = EventForm()
@@ -344,12 +337,12 @@ def event_detail(event_id):
         ).first()
 
     can_view_private_event = (
-            current_user.is_authenticated and (
+        current_user.is_authenticated and (
             current_user.id == event.host_id or
             current_user.is_admin() or
             (user_participation is not None and user_participation.status == 'approved') or
             has_event_invitation(current_user.id, event_id)
-    )
+        )
     )
     if not event.is_public and not can_view_private_event:
         abort(403)
@@ -479,6 +472,7 @@ def cancel_event(event_id):
 # ============================================================
 
 @main.route('/discover')
+@limiter.limit("60 per minute")
 def discover():
     """
     Discover page — lists all public events with keyword, category,
@@ -639,9 +633,9 @@ def bookmarks():
 @main.route('/events/<int:event_id>/bookmark', methods=['POST'])
 @login_required
 @active_required
+@limiter.limit("30 per minute")
 def toggle_bookmark(event_id):
     """Add or remove a bookmark for an event."""
-    event = Event.query.get_or_404(event_id)
     existing = Bookmark.query.filter_by(
         user_id=current_user.id,
         event_id=event_id
@@ -784,6 +778,7 @@ def profile_following(user_id):
 @main.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 @active_required
+@limiter.limit("10 per minute")
 def edit_profile():
     """Edit the current user's profile."""
     form = EditProfileForm()
@@ -1138,7 +1133,7 @@ def approve_participant(event_id, user_id):
     )
 
     logger.info(f'Participant approved: user={user_id} event={event_id}')
-    flash(f'Participant approved.', 'success')
+    flash('Participant approved.', 'success')
     return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
 
 
@@ -1474,7 +1469,6 @@ def report_event(event_id):
         flash('You cannot report your own event.', 'info')
         return redirect(url_for('main.event_detail', event_id=event_id))
 
-    from app.forms import ReportForm
     form = ReportForm()
 
     if form.validate_on_submit():
@@ -1517,7 +1511,6 @@ def report_user(user_id):
         flash('You cannot report yourself.', 'info')
         return redirect(url_for('main.profile', user_id=user_id))
 
-    from app.forms import ReportForm
     form = ReportForm()
 
     if form.validate_on_submit():
@@ -1564,8 +1557,6 @@ def host_dashboard():
     if not events:
         return render_template('dashboard/host_dashboard_empty.html', user=current_user)
 
-    from app.analytics import get_host_dashboard_metrics
-
     metrics = get_host_dashboard_metrics(current_user.id)
 
     return render_template('dashboard/host_dashboard.html',
@@ -1580,8 +1571,6 @@ def host_dashboard():
 def event_dashboard(event_id):
     """Detailed analytics for a specific event."""
     event = Event.query.get_or_404(event_id)
-
-    from app.analytics import get_event_analytics
 
     analytics = get_event_analytics(event_id)
 
@@ -1731,8 +1720,10 @@ def admin_update_report(report_id):
 
     report = Report.query.get_or_404(report_id)
 
-    new_status = request.form.get('status')
+    new_status = sanitize(request.form.get('status', ''))
     admin_notes = sanitize(request.form.get('admin_notes', ''))
+    if len(admin_notes) > 2000:
+        admin_notes = admin_notes[:2000]
 
     if new_status in ['open', 'reviewed', 'resolved', 'dismissed']:
         report.status = new_status

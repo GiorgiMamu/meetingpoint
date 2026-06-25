@@ -88,7 +88,7 @@ def send_password_reset_email(user):
     body = f"""Hi {user.name},
 
 You requested a password reset. Click the link below:
-{reset_url} 
+{reset_url}
 
 This link expires in 1 hour.
 
@@ -249,4 +249,3 @@ def convert_to_gel(amount, from_currency):
     rates = get_exchange_rates()
     rate = rates.get(from_currency.upper(), 1.0)
     return amount * rate
-

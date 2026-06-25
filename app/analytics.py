@@ -5,15 +5,12 @@ Uses pandas, numpy, and matplotlib for data analysis and visualization
 
 import base64
 import io
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from flask_login import current_user
 
-from app import db
 from app.models import Event, Participation, User
 
 
@@ -239,11 +236,6 @@ def get_host_dashboard_metrics(host_id):
     # Calculate aggregate metrics
     total_participations = Participation.query.filter(
         Participation.event_id.in_([e.id for e in events])
-    ).count()
-
-    total_approved = Participation.query.filter(
-        Participation.event_id.in_([e.id for e in events]),
-        Participation.status == 'approved'
     ).count()
 
     # Get analytics for each event

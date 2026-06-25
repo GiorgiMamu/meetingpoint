@@ -2,7 +2,6 @@ import html
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
@@ -14,7 +13,6 @@ from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from markupsafe import escape
-
 from config import config
 
 db = SQLAlchemy()
@@ -62,7 +60,7 @@ def create_app(config_name='default'):
         # During tests, avoid file logging to prevent file-lock / rotation errors on Windows
         app.logger.addHandler(logging.NullHandler())
 
-    from app import models
+    from app import models  # noqa: F401
     from app.models import Notification
 
     @app.context_processor
