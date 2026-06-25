@@ -1677,12 +1677,17 @@ def discover_recommended():
     if current_user.is_authenticated and current_user.is_active:
         from app.recommendations import get_recommendations, get_mood_based_suggestions
 
-        recommendations  = get_recommendations(current_user.id, limit=per_page * 10)
-        mood_suggestions = get_mood_based_suggestions(current_user.id, limit=6)
+        recommendations = get_recommendations(current_user.id, limit=per_page * 10)
 
-        # Remove events that already appear in the main recommendations list
+        # Pass the main recommendation IDs in directly so mood suggestions
+        # are guaranteed disjoint from them (previously this was done with
+        # a list comprehension *after* the call, but get_mood_based_suggestions
+        # could also independently include events the user already
+        # joined/bookmarked — now handled inside the function itself).
         rec_ids = {e.id for e, s in recommendations}
-        mood_suggestions = [e for e in mood_suggestions if e.id not in rec_ids]
+        mood_suggestions = get_mood_based_suggestions(
+            current_user.id, limit=6, exclude_ids=rec_ids
+        )
     else:
         from app.recommendations import get_trending_events
 

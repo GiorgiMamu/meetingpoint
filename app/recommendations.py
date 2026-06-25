@@ -46,13 +46,20 @@ def score_event(user, event, past_events, user_interests, user_locations, user_h
     combined_event_tags = event_tags | event_category_words
 
     if user_interests and combined_event_tags:
-        matches = len(user_interests & combined_event_tags)
-        partial = sum(
-            1 for ui in user_interests
-            for et in combined_event_tags
-            if ui in et or et in ui
-        )
-        score += min(35, matches * 15 + partial * 5)
+        exact_matches = user_interests & combined_event_tags
+
+        # Only count a partial/substring match for pairs that are NOT
+        # already counted as an exact match, so a single matching tag
+        # can't score in both buckets at once.
+        partial = 0
+        for ui in user_interests:
+            for et in combined_event_tags:
+                if ui == et:
+                    continue  # already counted in exact_matches
+                if ui in et or et in ui:
+                    partial += 1
+
+        score += min(35, len(exact_matches) * 15 + partial * 5)
 
     # ── 2. History category affinity (25 pts) ──────────────────────────────
     if past_events:
@@ -95,8 +102,11 @@ def score_event(user, event, past_events, user_interests, user_locations, user_h
         score += min(10, close_hours * 2)
 
     # ── 5. Recency of event creation (10 pts) ──────────────────────────────
+    # Decays linearly over a 30-day window instead of a ~10-day cliff, so
+    # "recency" behaves like a gradual signal rather than an on/off switch.
+    RECENCY_WINDOW_DAYS = 30
     days_old = max(0, (datetime.now() - event.created_at).days)
-    score += max(0, 10 - days_old)
+    score += max(0.0, 10 * (1 - days_old / RECENCY_WINDOW_DAYS))
 
     return min(100.0, score)
 
@@ -122,12 +132,15 @@ def get_recommendations(user_id, limit=12, exclude_bookmarked=True):
 
     now = datetime.now()
 
-    # Candidate events
+    # Candidate events. `.in_()` on an empty set correctly matches no rows,
+    # so we always use a real SQLAlchemy expression here instead of the
+    # Python literal `True`, which depended on engine-specific no-op
+    # handling rather than well-defined query semantics.
     candidates = Event.query.filter(
         Event.is_public.is_(True),
         Event.is_cancelled.is_(False),
         Event.event_time > now,
-        ~Event.id.in_(joined_ids) if joined_ids else True
+        ~Event.id.in_(joined_ids)
     ).all()
 
     if not candidates:
@@ -156,29 +169,45 @@ def get_recommendations(user_id, limit=12, exclude_bookmarked=True):
         for event in candidates
     ]
     scored.sort(key=lambda x: x[1], reverse=True)
-    return [(event, score) for event, score in scored[:limit]]  # now returns tuples
+    return [(event, score) for event, score in scored[:limit]]  # returns tuples
 
 
-def get_mood_based_suggestions(user_id, limit=6):
+def get_mood_based_suggestions(user_id, limit=6, exclude_ids=None):
     """
     Return events matching user's interests/mood tags.
     Falls back to recent events if no interests set.
+
+    `exclude_ids` lets callers keep this list disjoint from events the
+    user has already joined/bookmarked, or from another recommendation
+    list shown on the same page.
     """
     user = User.query.get(user_id)
     now = datetime.now()
+    exclude_ids = set(exclude_ids) if exclude_ids else set()
 
     if not user or not user.interests:
-        return Event.query.filter(
+        query = Event.query.filter(
             Event.is_public.is_(True),
             Event.is_cancelled.is_(False),
             Event.event_time > now
-        ).order_by(Event.created_at.desc()).limit(limit).all()
+        )
+        if exclude_ids:
+            query = query.filter(~Event.id.in_(exclude_ids))
+        return query.order_by(Event.created_at.desc()).limit(limit).all()
 
     user_interests = parse_tags(user.interests)
-    seen = set()
+    seen = set(exclude_ids)
     results = []
 
+    # Collect candidates per-interest, but don't break out of the whole
+    # loop on the first interest that fills the quota — that made results
+    # depend entirely on the arbitrary order of the user's interest tags.
+    # Instead, gather a bounded number of candidates per tag and stop once
+    # we have enough overall.
     for interest in user_interests:
+        if len(results) >= limit:
+            break
+
         events = Event.query.filter(
             Event.is_public.is_(True),
             Event.is_cancelled.is_(False),
@@ -187,30 +216,41 @@ def get_mood_based_suggestions(user_id, limit=6):
                 Event.category.ilike(f'%{interest}%'),
                 Event.mood_tags.ilike(f'%{interest}%')
             )
-        ).all()
+        ).limit(limit).all()  # cap the per-tag query too
+
         for e in events:
             if e.id not in seen:
                 seen.add(e.id)
                 results.append(e)
-        if len(results) >= limit:
-            break
+                if len(results) >= limit:
+                    break
 
     return results[:limit]
 
 
 def get_trending_events(limit=12):
-    """Return events with most joins in the last 7 days."""
+    """Return events with the most joins in the last 7 days."""
     now = datetime.now()
     week_ago = now - timedelta(days=7)
 
+    # The join-count filter is applied in the ON clause (via the join
+    # condition) rather than the WHERE clause, so events with zero recent
+    # participations are still included with a count of 0, instead of
+    # being silently dropped by an outerjoin-then-WHERE-filter pattern
+    # (which behaves like an inner join).
     trending = db.session.query(
         Event,
         db.func.count(Participation.id).label('recent_joins')
-    ).outerjoin(Participation).filter(
+    ).outerjoin(
+        Participation,
+        db.and_(
+            Participation.event_id == Event.id,
+            Participation.joined_at >= week_ago
+        )
+    ).filter(
         Event.is_public.is_(True),
         Event.is_cancelled.is_(False),
-        Event.event_time > now,
-        Participation.joined_at >= week_ago
+        Event.event_time > now
     ).group_by(Event.id).order_by(
         db.desc('recent_joins')
     ).limit(limit).all()
