@@ -3,7 +3,15 @@
 {% block content %}
 <div class="row g-4">
     <div class="col-md-4 text-center">
-        <div class="card p-4">
+        <div class="card p-4 position-relative">
+            {% if current_user.is_authenticated and current_user.id != user.id and not user.is_admin() %}
+            <a href="{{ url_for('main.report_user', user_id=user.id) }}"
+               class="position-absolute top-0 end-0 m-2 text-muted"
+               style="font-size:1rem; opacity:0.5; transition:opacity 0.2s;"
+               title="Report user"
+               onmouseover="this.style.opacity='1'"
+               onmouseout="this.style.opacity='0.5'">🚩</a>
+            {% endif %}
             {% if user.profile_photo %}
             <img alt="{{ user.name }}'s profile photo"
                  class="avatar-img" src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}">
@@ -65,8 +73,7 @@
                         <button type="submit" class="btn btn-outline-primary btn-sm">Follow</button>
                     {% endif %}
                 </form>
-                <a href="{{ url_for('main.report_user', user_id=user.id) }}"
-                   class="btn btn-outline-danger btn-sm mt-2">🚩 Report user</a>
+
             {% endif %}
         </div>
     </div>

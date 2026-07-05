@@ -354,10 +354,25 @@ def event_detail(event_id):
         participants = [p for p in event.participations
                         if p.status == 'approved']
 
+    invited_follower_ids = set()
+    if current_user.is_authenticated and current_user.id == event.host_id:
+        follower_ids = [
+            row.follower_id for row in event.host.followers.all()
+        ]
+        if follower_ids:
+            invited_follower_ids = {
+                n.user_id for n in Notification.query.filter(
+                    Notification.user_id.in_(follower_ids),
+                    Notification.type == 'invitation',
+                    Notification.related_event_id == event_id
+                ).all()
+            }
+
     return render_template('events/event_details.html',
                            event=event,
                            participants=participants,
-                           user_participation=user_participation)
+                           user_participation=user_participation,
+                           invited_follower_ids=invited_follower_ids)
 
 
 @main.route('/events/<int:event_id>/edit', methods=['GET', 'POST'])
@@ -1062,6 +1077,7 @@ def join_event(event_id):
         # notify host
         notification = Notification(
             user_id=event.host_id,
+            actor_user_id=current_user.id,
             type='join',
             message=f'{current_user.name} joined your event "{event.title}".',
             related_event_id=event_id
@@ -1081,7 +1097,7 @@ def join_event(event_id):
             user_id=event.host_id,
             actor_user_id=current_user.id,
             type='join_request',
-            message=f'{current_user.name} requested to join your event "{event.title}".',
+            message=f'{current_user.name} joined your event "{event.title}".',
             related_event_id=event_id
         )
         db.session.add(notification)
@@ -1112,6 +1128,7 @@ def leave_event(event_id):
 
     notification = Notification(
         user_id=event.host_id,
+        actor_user_id=current_user.id,
         type='leave',
         message=f'{current_user.name} left your event "{event.title}".',
         related_event_id=event_id

@@ -65,29 +65,25 @@
         {% endif %}
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-6">
+    <div class="row mb-4 align-items-start">
+        <div class="col-md-6 mb-3">
             {% if analytics.capacity_chart %}
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">🎯 Capacity Utilization</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <img src="{{ analytics.capacity_chart }}" class="img-fluid">
-                    </div>
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="section-title">Capacity utilization</h6>
+                    <img src="{{ analytics.capacity_chart }}" class="img-fluid">
                 </div>
+            </div>
             {% endif %}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 mb-3">
             {% if analytics.status_chart %}
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">📊 Status Distribution</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <img src="{{ analytics.status_chart }}" class="img-fluid">
-                    </div>
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="section-title">Status distribution</h6>
+                    <img src="{{ analytics.status_chart }}" class="img-fluid">
                 </div>
+            </div>
             {% endif %}
         </div>
     </div>

@@ -74,8 +74,10 @@
                 <a href="{{ url_for('main.event_dashboard', event_id=event.id) }}"
                     class="btn btn-outline-secondary w-100 mb-2">📊 View analytics</a>
                 {% if event.host.role != 'admin' %}
-                <a class="btn btn-outline-secondary w-100 mb-2"
-                   href="{{ url_for('main.share_event', event_id=event.id) }}">🔗 Share or invite</a>
+                <button type="button" class="btn btn-outline-secondary w-100 mb-2"
+                        data-bs-toggle="modal" data-bs-target="#shareModal">
+                    🔗 Share event
+                </button>
                 {% endif %}
                 <a class="btn btn-outline-primary w-100 mb-2"
                    href="{{ url_for('main.event_chat', event_id=event.id) }}">💬 Event chat</a>
@@ -106,7 +108,7 @@
                 <form action="{{ url_for('main.leave_event', event_id=event.id) }}" method="POST">
                     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
                     <button class="btn btn-outline-danger w-100" onclick="return confirm('Leave this event?')"
-                            type="submit">Leave event
+                            type="submit">🚪 Leave event
                     </button>
                 </form>
                 {% elif user_participation.status == 'declined' %}
@@ -220,4 +222,120 @@
 
     </div>
 </div>
+
+<!-- Share / invite modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Share event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="form-label fw-semibold mb-1">Shareable link</p>
+                <div class="input-group mb-4">
+                    <input type="text" id="share-url-input" class="form-control"
+                           value="{{ request.host_url.rstrip('/') }}{{ url_for('main.event_detail', event_id=event.id) }}"
+                           readonly>
+                    <button class="btn btn-primary" onclick="copyShareLink()">Copy</button>
+                </div>
+                <p id="copy-msg" class="text-success small mb-3" style="display:none;">
+                    Link copied!
+                </p>
+
+                {% if current_user.is_authenticated and current_user.id == event.host_id %}
+                    {% set followers = current_user.followers.order_by('created_at').all() %}
+                    {% if followers %}
+                        <p class="form-label fw-semibold mb-2">Invite your followers</p>
+
+                        {% if followers|length > 6 %}
+                        <input type="text" id="follower-search" class="form-control form-control-sm mb-2"
+                               placeholder="Search followers..." oninput="filterFollowers()">
+                        {% endif %}
+
+                        <div style="max-height:260px; overflow-y:auto;" id="follower-list">
+                            {% for row in followers %}
+                            {% set follower = row.follower %}
+                            {% if not follower.is_admin() %}
+                            {% set already_invited = follower.id in invited_follower_ids if invited_follower_ids is defined else false %}
+                            {% set already_joined = event.participations | selectattr('user_id', 'equalto', follower.id) | selectattr('status', 'equalto', 'approved') | list | length > 0 %}
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom follower-row {% if loop.index > 6 %}follower-hidden{% endif %}"
+                                 data-name="{{ follower.name|lower }}">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-initials-sm">
+                                        {{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?' }}
+                                    </div>
+                                    <span class="small">{{ follower.name }}</span>
+                                </div>
+                                {% if already_joined %}
+                                    <span class="badge bg-success">Attending</span>
+                                {% elif already_invited %}
+                                    <span class="badge bg-secondary">Invited</span>
+                                {% else %}
+                                    <form method="POST"
+                                          action="{{ url_for('main.share_event_to_follower', event_id=event.id, follower_id=follower.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Invite</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        {% if followers|length > 6 %}
+                        <button type="button" id="follower-show-more" class="btn btn-link btn-sm p-0 mt-1"
+                                onclick="showAllFollowers()">
+                            Show {{ followers|length - 6 }} more
+                        </button>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted small">No followers to invite yet.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .follower-hidden { display: none; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyShareLink() {
+    var input = document.getElementById('share-url-input');
+    input.select();
+    document.execCommand('copy');
+    var msg = document.getElementById('copy-msg');
+    msg.style.display = 'block';
+    setTimeout(function() { msg.style.display = 'none'; }, 2000);
+}
+
+function showAllFollowers() {
+    document.querySelectorAll('.follower-hidden').forEach(function(el) {
+        el.classList.remove('follower-hidden');
+        el.style.display = '';
+    });
+    var btn = document.getElementById('follower-show-more');
+    if (btn) btn.style.display = 'none';
+}
+
+function filterFollowers() {
+    var query = document.getElementById('follower-search').value.trim().toLowerCase();
+    var rows = document.querySelectorAll('.follower-row');
+    var showMoreBtn = document.getElementById('follower-show-more');
+
+    rows.forEach(function(row) {
+        var matches = row.dataset.name.indexOf(query) !== -1;
+        row.style.display = matches ? '' : 'none';
+    });
+
+    // While searching, ignore the "first 6" cap and the show-more button
+    if (showMoreBtn) showMoreBtn.style.display = query ? 'none' : '';
+}
+</script>
 {% endblock %}

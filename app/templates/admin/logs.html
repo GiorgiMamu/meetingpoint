@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h2 class="mb-4">📊 System Audit Logs</h2>
+    <h2 class="mb-4">System audit logs</h2>
     <div class="d-flex justify-content-between align-items-end mb-3">
         <ul class="nav nav-tabs border-bottom-0 mb-0">
             <li class="nav-item">
@@ -104,7 +104,7 @@
                                 <td><small>{{ log.timestamp.strftime('%b %d, %Y %H:%M:%S') }}</small></td>
                                 <td>
                                     <a href="{{ url_for('main.admin_log_detail', log_id=log.id) }}"
-                                       class="btn btn-sm btn-info">View</a>
+                                       class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
                             </tr>
                         {% endfor %}

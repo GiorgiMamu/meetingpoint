@@ -147,10 +147,11 @@
 {% if events %}
 <div class="row row-cols-1 row-cols-md-3 g-4">
     {% for event in events %}
+    {% set user_part = event.participations | selectattr('user_id', 'equalto', current_user.id) | list if current_user.is_authenticated else [] %}
     <div class="col">
-        <a class="text-decoration-none text-reset d-block h-100"
-           href="{{ url_for('main.event_detail', event_id=event.id) }}">
-            <div class="card card-event h-100">
+        <div class="card card-event h-100">
+            <a class="text-decoration-none text-reset d-block"
+               href="{{ url_for('main.event_detail', event_id=event.id) }}">
                 {% if event.photo %}
                 <img alt="{{ event.title }} event photo"
                      class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
@@ -159,7 +160,7 @@
                     <span class="gradient-placeholder-icon">🗓️</span>
                 </div>
                 {% endif %}
-                <div class="card-body">
+                <div class="card-body pb-2">
                     <h5 class="card-title">{{ event.title }}</h5>
                     <p class="text-muted small mb-1">
                         📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
@@ -174,10 +175,43 @@
                         {% else %}
                         <span class="badge bg-success">Free</span>
                         {% endif %}
+                        {% if event.is_cancelled %}
+                        <span class="badge bg-danger">Cancelled</span>
+                        {% endif %}
                     </div>
                 </div>
+            </a>
+
+            <div class="card-footer d-flex gap-2 align-items-stretch">
+                <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
+                   class="btn btn-outline-secondary btn-sm flex-grow-1 card-footer-btn">View</a>
+                {% if event.is_cancelled %}
+                    <span class="btn btn-sm btn-danger disabled card-footer-btn">Cancelled</span>
+                {% elif current_user.is_authenticated %}
+                    {% if user_part %}
+                        {% if user_part[0].status == 'approved' %}
+                            <span class="btn btn-sm btn-success disabled card-footer-btn">Attending</span>
+                        {% elif user_part[0].status == 'pending' %}
+                            <span class="btn btn-sm btn-warning disabled card-footer-btn">Pending</span>
+                        {% elif user_part[0].status == 'declined' %}
+                            <span class="btn btn-sm btn-danger disabled card-footer-btn">Rejected</span>
+                        {% endif %}
+                    {% elif event.host_id == current_user.id %}
+                        <span class="btn btn-sm btn-secondary disabled card-footer-btn">Host</span>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}" class="m-0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-primary card-footer-btn"
+                                    title="{% if event.approval_mode == 'manual' %}Request to join{% else %}Join event{% endif %}">
+                                {% if event.approval_mode == 'manual' %}Request{% else %}Join{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('main.login') }}" class="btn btn-sm btn-primary card-footer-btn">Join</a>
+                {% endif %}
             </div>
-        </a>
+        </div>
     </div>
     {% endfor %}
 </div>
@@ -221,6 +255,73 @@
     </p>
 </div>
 {% endif %}
+
+<style>
+    /* ── Beautified search bar ── */
+    .search-bar {
+        background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65));
+        border: 1px solid rgba(45, 106, 79, 0.12);
+        border-radius: 16px;
+        padding: 1.5rem 1.5rem 1.25rem;
+        box-shadow: 0 4px 18px rgba(45, 106, 79, 0.08);
+        backdrop-filter: blur(6px);
+    }
+    .search-bar .form-label {
+        color: var(--forest-dark, #2d6a4f);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+    }
+    .search-bar .form-control,
+    .search-bar .form-select {
+        border: 1px solid rgba(45, 106, 79, 0.18);
+        border-radius: 10px;
+        background-color: rgba(255,255,255,0.9);
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .search-bar .form-control:focus,
+    .search-bar .form-select:focus {
+        border-color: var(--forest-dark, #2d6a4f);
+        box-shadow: 0 0 0 0.2rem rgba(45, 106, 79, 0.15);
+    }
+    .search-bar .btn-primary {
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    .search-bar .btn-outline-primary,
+    .search-bar .btn-outline-secondary {
+        border-radius: 10px;
+    }
+    .search-bar hr,
+    .search-bar > form > .row + .row {
+        margin-top: 0.5rem;
+    }
+    .search-bar .row.g-2:not(:last-child) {
+        padding-bottom: 0.5rem;
+        border-bottom: 1px dashed rgba(45, 106, 79, 0.12);
+        margin-bottom: 0.5rem;
+    }
+    #radius-location-input {
+        border-radius: 10px;
+    }
+
+    /* ── Card footer button alignment ── */
+    .card-footer-btn {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .card-footer form {
+        display: flex;
+        flex-shrink: 0;
+    }
+    .card-footer form .card-footer-btn {
+        width: 100%;
+    }
+</style>
+
 {% endblock %}
 
 {% block scripts %}

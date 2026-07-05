@@ -639,3 +639,66 @@ footer small {
     background-color: var(--sand-dark) !important;
     color: var(--charcoal-dark) !important;
 }
+
+
+/* ── Admin nav tabs ── */
+.nav-tabs .nav-link {
+    color: var(--charcoal-light);
+    border: 1.5px solid transparent;
+    border-radius: 6px 6px 0 0;
+    font-weight: 500;
+    padding: 0.5rem 1.1rem;
+    transition: background var(--transition), color var(--transition);
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: var(--sand-light);
+    color: var(--forest-dark);
+    border-color: var(--sand-dark) var(--sand-dark) transparent;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--white);
+    color: var(--forest-dark);
+    border-color: var(--forest-light) var(--forest-light) var(--white);
+    font-weight: 700;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid var(--forest-light);
+}
+
+/* ── Back/breadcrumb buttons ── */
+.btn-back {
+    color: var(--charcoal-light);
+    background: transparent;
+    border: 1.5px solid var(--charcoal-light);
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.875rem;
+    transition: all var(--transition);
+}
+
+.btn-back:hover {
+    background-color: var(--charcoal-light);
+    color: var(--white);
+}
+/* ── Dashboard cards ── */
+.dashboard-metric-card .card-body {
+    padding: 1.8rem 1.5rem;
+}
+
+.dashboard-metric-card h6 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--charcoal-light);
+    margin-bottom: 0.75rem;
+}
+
+.dashboard-metric-card h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0;
+}

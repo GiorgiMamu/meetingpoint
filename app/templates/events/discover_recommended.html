@@ -21,36 +21,69 @@
     <h5 class="section-title">Based on your interests</h5>
     <div class="row row-cols-1 row-cols-md-3 g-3">
         {% for event in mood_suggestions %}
+        {% set user_part = event.participations | selectattr('user_id', 'equalto', current_user.id) | list if current_user.is_authenticated else [] %}
         <div class="col">
             <div class="card card-event h-100">
-                {% if event.photo %}
-                    <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                         class="card-img-top" alt="{{ event.title }}">
-                {% else %}
-                    <div class="gradient-placeholder">
-                        <span class="gradient-placeholder-icon">🗓️</span>
-                    </div>
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ event.title }}</h5>
-                    <p class="text-muted small mb-1">
-                        📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
-                    </p>
-                    {% if event.location_text %}
-                        <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
+                <a class="text-decoration-none text-reset d-block"
+                   href="{{ url_for('main.event_detail', event_id=event.id) }}">
+                    {% if event.photo %}
+                        <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+                             class="card-img-top" alt="{{ event.title }}">
+                    {% else %}
+                        <div class="gradient-placeholder">
+                            <span class="gradient-placeholder-icon">🗓️</span>
+                        </div>
                     {% endif %}
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
-                        {% if event.price and event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
-                        {% else %}
-                            <span class="badge bg-success">Free</span>
+                    <div class="card-body pb-2">
+                        <h5 class="card-title">{{ event.title }}</h5>
+                        <p class="text-muted small mb-1">
+                            📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
+                        </p>
+                        {% if event.location_text %}
+                            <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
                         {% endif %}
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
+                            {% if event.price and event.price > 0 %}
+                                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
+                            {% else %}
+                                <span class="badge bg-success">Free</span>
+                            {% endif %}
+                            {% if event.is_cancelled %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer">
+                </a>
+
+                <div class="card-footer d-flex gap-2 align-items-stretch">
                     <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-                       class="btn btn-outline-primary btn-sm w-100">View event</a>
+                       class="btn btn-outline-secondary btn-sm flex-grow-1 card-footer-btn">View</a>
+                    {% if event.is_cancelled %}
+                        <span class="btn btn-sm btn-danger disabled card-footer-btn">Cancelled</span>
+                    {% elif current_user.is_authenticated %}
+                        {% if user_part %}
+                            {% if user_part[0].status == 'approved' %}
+                                <span class="btn btn-sm btn-success disabled card-footer-btn">Attending</span>
+                            {% elif user_part[0].status == 'pending' %}
+                                <span class="btn btn-sm btn-warning disabled card-footer-btn">Pending</span>
+                            {% elif user_part[0].status == 'declined' %}
+                                <span class="btn btn-sm btn-danger disabled card-footer-btn">Rejected</span>
+                            {% endif %}
+                        {% elif event.host_id == current_user.id %}
+                            <span class="btn btn-sm btn-secondary disabled card-footer-btn">Host</span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}" class="m-0">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-primary card-footer-btn"
+                                        title="{% if event.approval_mode == 'manual' %}Request to join{% else %}Join event{% endif %}">
+                                    {% if event.approval_mode == 'manual' %}Request{% else %}Join{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <a href="{{ url_for('main.login') }}" class="btn btn-sm btn-primary card-footer-btn">Join</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -71,41 +104,75 @@
 {% if events %}
     <div class="row row-cols-1 row-cols-md-3 g-4">
         {% for event, score in events %}
+        {% set user_part = event.participations | selectattr('user_id', 'equalto', current_user.id) | list if current_user.is_authenticated else [] %}
         <div class="col">
             <div class="card card-event h-100">
-                {% if event.photo %}
-                    <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                         class="card-img-top" alt="{{ event.title }}">
-                {% else %}
-                    <div class="gradient-placeholder">
-                        <span class="gradient-placeholder-icon">🗓️</span>
-                    </div>
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ event.title }}</h5>
-                    <p class="text-muted small mb-1">
-                        📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
-                    </p>
-                    {% if event.location_text %}
-                        <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
+                <a class="text-decoration-none text-reset d-block"
+                   href="{{ url_for('main.event_detail', event_id=event.id) }}">
+                    {% if event.photo %}
+                        <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
+                             class="card-img-top" alt="{{ event.title }}">
+                    {% else %}
+                        <div class="gradient-placeholder">
+                            <span class="gradient-placeholder-icon">🗓️</span>
+                        </div>
                     {% endif %}
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
-
-                        {% if current_user.is_authenticated %}
-                            <span class="badge bg-info">{{ "%.0f"|format(score) }}% match</span>
+                    <div class="card-body pb-2">
+                        <h5 class="card-title">{{ event.title }}</h5>
+                        <p class="text-muted small mb-1">
+                            📅 {{ event.event_time.strftime('%b %d, %Y · %H:%M') }}
+                        </p>
+                        {% if event.location_text %}
+                            <p class="text-muted small mb-2">📍 {{ event.location_text }}</p>
                         {% endif %}
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            <span class="badge bg-secondary">{{ category_labels.get(event.category, event.category) }}</span>
 
-                        {% if event.price and event.price > 0 %}
-                            <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
-                        {% else %}
-                            <span class="badge bg-success">Free</span>
-                        {% endif %}
+                            {% if current_user.is_authenticated %}
+                                <span class="badge bg-info">{{ "%.0f"|format(score) }}% match</span>
+                            {% endif %}
+
+                            {% if event.price and event.price > 0 %}
+                                <span class="badge bg-warning">{{ "%.2f"|format(event.price) }} {{ event.currency or 'GEL' }}</span>
+                            {% else %}
+                                <span class="badge bg-success">Free</span>
+                            {% endif %}
+
+                            {% if event.is_cancelled %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer">
+                </a>
+
+                <div class="card-footer d-flex gap-2 align-items-stretch">
                     <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-                       class="btn btn-outline-primary btn-sm w-100">View event</a>
+                       class="btn btn-outline-secondary btn-sm flex-grow-1 card-footer-btn">View</a>
+                    {% if event.is_cancelled %}
+                        <span class="btn btn-sm btn-danger disabled card-footer-btn">Cancelled</span>
+                    {% elif current_user.is_authenticated %}
+                        {% if user_part %}
+                            {% if user_part[0].status == 'approved' %}
+                                <span class="btn btn-sm btn-success disabled card-footer-btn">Attending</span>
+                            {% elif user_part[0].status == 'pending' %}
+                                <span class="btn btn-sm btn-warning disabled card-footer-btn">Pending</span>
+                            {% elif user_part[0].status == 'declined' %}
+                                <span class="btn btn-sm btn-danger disabled card-footer-btn">Rejected</span>
+                            {% endif %}
+                        {% elif event.host_id == current_user.id %}
+                            <span class="btn btn-sm btn-secondary disabled card-footer-btn">Host</span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}" class="m-0">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-primary card-footer-btn"
+                                        title="{% if event.approval_mode == 'manual' %}Request to join{% else %}Join event{% endif %}">
+                                    {% if event.approval_mode == 'manual' %}Request{% else %}Join{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <a href="{{ url_for('main.login') }}" class="btn btn-sm btn-primary card-footer-btn">Join</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -139,4 +206,23 @@
         <a href="{{ url_for('main.discover') }}" class="btn btn-primary">Browse all events</a>
     </div>
 {% endif %}
+
+<style>
+    /* ── Card footer button alignment (matches discover.html) ── */
+    .card-footer-btn {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .card-footer form {
+        display: flex;
+        flex-shrink: 0;
+    }
+    .card-footer form .card-footer-btn {
+        width: 100%;
+    }
+</style>
+
 {% endblock %}

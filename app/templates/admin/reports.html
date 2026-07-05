@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h2 class="mb-4">📋 Reported Content</h2>
+    <h2 class="mb-4">Reported content</h2>
     <div class="d-flex justify-content-between align-items-end mb-3">
         <ul class="nav nav-tabs border-bottom-0 mb-0">
             <li class="nav-item">
@@ -107,7 +107,7 @@
                                 <td>{{ report.created_at.strftime('%b %d, %Y %H:%M') }}</td>
                                 <td>
                                     <a href="{{ url_for('main.admin_report_detail', report_id=report.id) }}"
-                                       class="btn btn-sm btn-info">View</a>
+                                        class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
                             </tr>
                         {% endfor %}

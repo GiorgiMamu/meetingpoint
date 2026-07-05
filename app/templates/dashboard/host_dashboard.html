@@ -12,7 +12,7 @@
     <!-- Key Metrics -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card text-center">
+            <div class="card text-center dashboard-metric-card">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Total Events</h6>
                     <h2 class="card-text text-primary">{{ metrics.total_events }}</h2>
@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center">
+            <div class="card text-center dashboard-metric-card">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Total Participants</h6>
                     <h2 class="card-text text-success">{{ metrics.total_participants }}</h2>
@@ -28,7 +28,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center">
+            <div class="card text-center dashboard-metric-card">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Avg Attendance Rate</h6>
                     <h2 class="card-text text-info">{{ metrics.avg_attendance_rate }}%</h2>
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center">
+            <div class="card text-center dashboard-metric-card">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Upcoming Events</h6>
                     <h2 class="card-text text-warning">{{ metrics.upcoming_count }}</h2>
@@ -49,8 +49,8 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">📊 Top Performing Events</h5>
+                <div class="card-body pb-0">
+                    <h5 class="section-title">Top Performing Events</h5>
                 </div>
                 <div class="card-body">
                     {% if metrics.top_events %}
@@ -78,14 +78,14 @@
                                             </td>
                                             <td>
                                                 <div class="progress" style="height: 20px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" 
+                                                    <div class="progress-bar bg-success" role="progressbar"
                                                          style="width: {{ event.attendance_rate }}%">
                                                         {{ event.attendance_rate }}%
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <a href="{{ url_for('main.event_dashboard', event_id=event.event_id) }}" 
+                                                <a href="{{ url_for('main.event_dashboard', event_id=event.event_id) }}"
                                                    class="btn btn-sm btn-info">View</a>
                                             </td>
                                         </tr>
@@ -105,8 +105,8 @@
     <div class="row">
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">📅 Upcoming Events</h5>
+                <div class="card-body pb-0">
+                    <h5 class="section-title">Upcoming Events</h5>
                 </div>
                 <div class="card-body">
                     {% if metrics.upcoming_events %}
@@ -117,7 +117,7 @@
                                         <h6 class="mb-1">{{ event.title }}</h6>
                                         <small class="text-muted">{{ event.event_time.strftime('%B %d, %Y %H:%M') }}</small>
                                     </div>
-                                    <a href="{{ url_for('main.event_dashboard', event_id=event.id) }}" 
+                                    <a href="{{ url_for('main.event_dashboard', event_id=event.id) }}"
                                        class="btn btn-sm btn-outline-primary">Analytics</a>
                                 </li>
                             {% endfor %}
@@ -131,8 +131,8 @@
 
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">📋 Recent Events</h5>
+                <div class="card-body pb-0">
+                    <h5 class="section-title">Recent Events</h5>
                 </div>
                 <div class="card-body">
                     {% if metrics.past_events %}

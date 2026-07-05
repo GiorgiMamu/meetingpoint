@@ -53,25 +53,24 @@
                 <div class="flex-grow-1">
                     <p class="mb-0">
                         {% if n.type == 'follow' and n.actor_user %}
-                        <strong>{{ n.actor_user.name|display }}</strong> started following you.
+                        {{ n.actor_user.name|display }} started following you.
                         {% elif n.type == 'invitation' and n.actor_user and n.related_event %}
-                        <strong>{{ n.actor_user.name|display }}</strong> invited you to "<strong>{{
-                        n.related_event.title|display }}</strong>".
+                        {{ n.actor_user.name|display }} invited you to "{{
+                        n.related_event.title|display }}".
                         {% elif n.type == 'join_request' and n.actor_user and n.related_event %}
-                        <strong>{{ n.actor_user.name|display }}</strong> requested to join "<strong>{{
-                        n.related_event.title|display }}</strong>".
+                        {{ n.actor_user.name|display }} requested to join "{{
+                        n.related_event.title|display }}".
                         {% elif n.type == 'approval' and n.related_event %}
-                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" has been approved.
+                        Your request to join "{{ n.related_event.title|display }}" has been approved.
                         {% elif n.type == 'declined' and n.related_event %}
-                        Your request to join "<strong>{{ n.related_event.title|display }}</strong>" was rejected.
+                        Your request to join "{{ n.related_event.title|display }}" was rejected.
                         {% elif n.type == 'cancellation' and n.related_event %}
-                        "<strong>{{ n.related_event.title|display }}</strong>" has been cancelled.
+                        "{{ n.related_event.title|display }}" has been cancelled.
                         {% else %}
                         {{ n.message|display }}
                         {% endif %}
                     </p>
-                    {% set show_profile_button = n.actor_user is not none and n.type in ['follow', 'invitation',
-                    'join_request'] %}
+                    {% set show_profile_button = n.actor_user is not none and n.type in ['follow', 'invitation', 'join_request', 'join', 'leave'] %}
                     {% set show_event_button = n.related_event_id is not none and n.type in ['invitation', 'approval',
                     'join_request', 'join', 'cancellation', 'declined', 'leave', 'removed', 'reminder'] %}
                     {% if show_profile_button or show_event_button or n.type == 'join_request' %}

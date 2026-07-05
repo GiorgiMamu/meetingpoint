@@ -39,8 +39,9 @@
             <ul class="navbar-nav ms-auto">
                 {% if current_user.is_authenticated %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover') }}">Discover</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover_recommended') }}">✨ For you</a></li>
-
+                {% if not current_user.is_admin() %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.discover_recommended') }}">For you</a></li>
+                {% endif %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('main.chats') }}">Chats</a></li>
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('main.notifications') }}">
