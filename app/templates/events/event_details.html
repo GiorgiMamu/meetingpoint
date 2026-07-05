@@ -115,11 +115,19 @@
                 <div class="alert alert-danger mb-0">❌ Your request was rejected.</div>
                 {% endif %}
                 {% else %}
-                <p class="text-muted small">Join this event to participate and access the group chat.</p>
-                <form action="{{ url_for('main.join_event', event_id=event.id) }}" method="POST">
-                    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-                    <button class="btn btn-primary w-100" type="submit">Join event</button>
-                </form>
+                {% if event.approval_mode == 'manual' %}
+                    <p class="text-muted small">This event requires host approval. Send a request to participate.</p>
+                    <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary w-100">Request to participate</button>
+                    </form>
+                {% else %}
+                    <p class="text-muted small">Join this event to participate and access the group chat.</p>
+                    <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary w-100">Join event</button>
+                    </form>
+                {% endif %}
                 {% endif %}
                 {% else %}
                 <p class="text-muted small mb-0">
@@ -272,11 +280,13 @@
                                 {% elif already_invited %}
                                     <span class="badge bg-secondary">Invited</span>
                                 {% else %}
-                                    <form method="POST"
-                                          action="{{ url_for('main.share_event_to_follower', event_id=event.id, follower_id=follower.id) }}">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">Invite</button>
-                                    </form>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary invite-btn"
+                                            data-url="{{ url_for('main.share_event_to_follower', event_id=event.id, follower_id=follower.id) }}"
+                                            data-csrf="{{ csrf_token() }}"
+                                            data-follower-id="{{ follower.id }}">
+                                        Invite
+                                    </button>
                                 {% endif %}
                             </div>
                             {% endif %}
@@ -337,5 +347,32 @@ function filterFollowers() {
     // While searching, ignore the "first 6" cap and the show-more button
     if (showMoreBtn) showMoreBtn.style.display = query ? 'none' : '';
 }
+
+
+// Invite via AJAX — stay in modal
+document.querySelectorAll('.invite-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var url = btn.getAttribute('data-url');
+        var csrf = btn.getAttribute('data-csrf');
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrf
+            },
+            body: 'csrf_token=' + encodeURIComponent(csrf)
+        }).then(function(response) {
+            if (response.ok || response.redirected) {
+                btn.textContent = 'Invited';
+                btn.disabled = true;
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }).catch(function() {
+            btn.textContent = 'Error';
+        });
+    });
+});
 </script>
 {% endblock %}

@@ -115,27 +115,42 @@ def _generate_capacity_chart(event, approved_count):
             return None
 
         available = max(0, event.capacity_max - approved_count)
-        sizes = [approved_count, available]
-        labels = [f'Filled\n({approved_count})', f'Available\n({available})']
-        colors = ['#1F3D2B', '#e9ecef']
 
-        fig, ax = plt.subplots(figsize=(6, 5))
-        ax.pie(
-            sizes, labels=labels, colors=colors, autopct='%1.1f%%',
-            startangle=90, textprops={'fontsize': 11}
+        if approved_count == 0 and available == 0:
+            return None
+
+        sizes = [approved_count, available]
+        labels = [f'Filled ({approved_count})', f'Available ({available})']
+        colors = ['#71bd84', '#e9ecef']
+
+        fig, ax = plt.subplots(figsize=(5, 5))
+        wedges, texts, autotexts = ax.pie(
+            sizes,
+            labels=None,
+            colors=colors,
+            autopct=lambda p: f'{p:.1f}%' if p > 3 else '',
+            startangle=90,
+            wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
+        )
+        ax.legend(
+            wedges, labels,
+            loc='lower center',
+            bbox_to_anchor=(0.5, -0.12),
+            ncol=2,
+            fontsize=9,
+            frameon=False
         )
         ax.set_title(
-            f'Capacity utilization\n(Max: {event.capacity_max})',
-            fontsize=12, fontweight='bold'
+            f'Capacity utilization (max: {event.capacity_max})',
+            fontsize=11, fontweight='bold', pad=10
         )
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        fig.savefig(img_buffer, format='png', dpi=80, bbox_inches='tight')
+        fig.savefig(img_buffer, format='png', dpi=90, bbox_inches='tight')
         img_buffer.seek(0)
         img_base64 = base64.b64encode(img_buffer.read()).decode()
         plt.close(fig)
-
         return f"data:image/png;base64,{img_base64}"
     except Exception as e:
         plt.close('all')
@@ -150,33 +165,53 @@ def _generate_status_distribution_chart(approved, pending, declined):
         if total == 0:
             return None
 
-        sizes = [approved, pending, declined]
-        labels = [
-            f'Approved\n({approved})',
-            f'Pending\n({pending})',
-            f'Rejected\n({declined})'
-        ]
-        colors = ['#1F3D2B', '#C2A97A', '#A06A6A']
+        data = [(approved, f'Approved ({approved})', '#1F3D2B'),
+                (pending, f'Pending ({pending})', '#C2A97A'),
+                (declined, f'Rejected ({declined})', '#A06A6A')]
+        data = [(s, l, c) for s, l, c in data if s > 0]
 
-        fig, ax = plt.subplots(figsize=(6, 5))
-        ax.pie(
-            sizes, labels=labels, colors=colors, autopct='%1.1f%%',
-            startangle=90, textprops={'fontsize': 11}
+        if not data:
+            return None
+
+        sizes = [d[0] for d in data]
+        labels = [d[1] for d in data]
+        colors = [d[2] for d in data]
+
+        fig, ax = plt.subplots(figsize=(5, 5))
+        wedges, texts, autotexts = ax.pie(
+            sizes,
+            labels=None,
+            colors=colors,
+            autopct=lambda p: f'{p:.1f}%' if p > 3 else '',
+            startangle=90,
+            wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
         )
-        ax.set_title('Participation status distribution', fontsize=12, fontweight='bold')
+        ax.legend(
+            wedges, labels,
+            loc='lower center',
+            bbox_to_anchor=(0.5, -0.12),
+            ncol=2,
+            fontsize=9,
+            frameon=False
+        )
+        ax.set_title(
+            'Participation status distribution',
+            fontsize=11, fontweight='bold', pad=10
+        )
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        fig.savefig(img_buffer, format='png', dpi=80, bbox_inches='tight')
+        fig.savefig(img_buffer, format='png', dpi=90, bbox_inches='tight')
         img_buffer.seek(0)
         img_base64 = base64.b64encode(img_buffer.read()).decode()
         plt.close(fig)
-
         return f"data:image/png;base64,{img_base64}"
     except Exception as e:
         plt.close('all')
         print(f"Error generating status chart: {e}")
         return None
+
+
 
 
 def get_host_dashboard_metrics(host_id):

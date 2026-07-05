@@ -529,10 +529,13 @@ def discover():
     if active_filters:
         logger.info(f'Search query: {active_filters}')
 
+    is_admin_flag = current_user.is_authenticated and current_user.is_admin
+
     # Cache identical non-radius searches
     cache_key = (
         f"discover:{keyword}:{category}:{date_from}:{date_to}:"
         f"{mood}:{size_min}:{size_max}:{price_max}:{free_only}:{page}"
+        f"admin={is_admin_flag}"
     )
 
     cached = cache.get(cache_key)
@@ -1347,20 +1350,14 @@ def share_event(event_id):
                     Notification.related_event_id == event_id
                 ).all()
             }
-    return render_template(
-        'events/share_event.html',
-        event=event,
-        share_url=share_url,
-        followers=followers,
-        invited_follower_ids=invited_follower_ids
-    )
+    return redirect(url_for('main.event_detail', event_id=event_id))
 
 
 @main.route('/events/<int:event_id>/share-to-follower/<int:follower_id>', methods=['POST'])
 @login_required
 @active_required
 def share_event_to_follower(event_id, follower_id):
-    """Send an event invitation notification to one of the user's followers."""
+    """Send an event invitation notification to one of the host's followers."""
     event = Event.query.get_or_404(event_id)
     if event.is_cancelled:
         abort(403)
@@ -1375,17 +1372,14 @@ def share_event_to_follower(event_id, follower_id):
     if not is_follower:
         abort(403)
 
-    # Check if user is already attending (has approved participation)
     existing_participation = Participation.query.filter_by(
         user_id=follower_id,
         event_id=event_id,
         status='approved'
     ).first()
     if existing_participation:
-        flash(f'{follower.name} is already attending this event.', 'info')
-        return redirect(url_for('main.share_event', event_id=event_id))
+        return redirect(url_for('main.event_detail', event_id=event_id))
 
-    # Check if invitation already exists
     existing_notification = Notification.query.filter_by(
         user_id=follower_id,
         type='invitation',
@@ -1393,8 +1387,7 @@ def share_event_to_follower(event_id, follower_id):
         actor_user_id=current_user.id
     ).first()
     if existing_notification:
-        flash(f'{follower.name} already received this invitation.', 'info')
-        return redirect(url_for('main.share_event', event_id=event_id))
+        return redirect(url_for('main.event_detail', event_id=event_id))
 
     add_invited_participation(event, follower)
     notification = Notification(
@@ -1407,8 +1400,9 @@ def share_event_to_follower(event_id, follower_id):
     db.session.add(notification)
     db.session.commit()
 
-    flash(f'Invitation sent to {follower.name}.', 'success')
-    return redirect(url_for('main.share_event', event_id=event_id))
+    logger.info(f'Invitation sent: event={event_id} to user={follower_id} by {current_user.id}')
+    return redirect(url_for('main.event_detail', event_id=event_id))
+
 
 
 # ============================================================

@@ -5,8 +5,8 @@
     <h2>User management</h2>
 </div>
 
-<div class="d-flex justify-content-between align-items-end mb-3">
-    <ul class="nav nav-tabs border-bottom-0 mb-0">
+<div class="d-flex justify-content-between align-items-end mb-0">
+    <ul class="nav nav-tabs border-0">
         <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'main.admin_users' %}active{% endif %}"
                href="{{ url_for('main.admin_users') }}">Users</a>
@@ -24,7 +24,13 @@
                href="{{ url_for('main.admin_logs') }}">System logs</a>
         </li>
     </ul>
-    <span class="badge bg-primary mb-2">{{ users|length }} Total users</span>
+    <span class="badge bg-secondary mb-1">
+        {% if request.endpoint == 'main.admin_users' %}{{ users|length }} total users
+        {% elif request.endpoint == 'main.admin_events' %}{{ events|length }} total events
+        {% elif request.endpoint == 'main.admin_reports' %}{{ pagination.total if pagination else 0 }} total reports
+        {% elif request.endpoint == 'main.admin_logs' %}{{ pagination.total if pagination else 0 }} total logs
+        {% endif %}
+    </span>
 </div>
 
 <div class="card">
