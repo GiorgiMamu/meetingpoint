@@ -509,6 +509,8 @@ def discover():
     radius_km = request.args.get('radius_km', '', type=str)
     center_lat = request.args.get('center_lat', '', type=str)
     center_lng = request.args.get('center_lng', '', type=str)
+    filters_open = bool(request.args.get('filters_open'))
+    map_open = bool(request.args.get('map_open'))
 
     # Log all search queries and filters for analytics/debugging
     active_filters = {k: v for k, v in {
@@ -661,6 +663,7 @@ def discover():
         radius_km=radius_km,
         center_lat=center_lat,
         center_lng=center_lng
+        ,filters_open=filters_open, map_open=map_open
     )
 
     # Radius search is not cached because it depends on dynamic coordinates
@@ -703,7 +706,7 @@ def toggle_bookmark(event_id):
         bookmark = Bookmark(user_id=current_user.id, event_id=event_id)
         db.session.add(bookmark)
         db.session.commit()
-        flash('Event bookmarked!', 'success')
+        flash('Event bookmarked', 'success')
         logger.info(f'Bookmark added: user={current_user.id} event={event_id}')
 
     return redirect(request.referrer or url_for('main.event_detail', event_id=event_id))
@@ -1604,7 +1607,7 @@ def report_user(user_id):
         db.session.commit()
 
         logger.info(f'User reported: user_id={user_id} by user={current_user.id} reason={form.reason.data}')
-        flash('Thank you for reporting this user. Our admins will review it soon.', 'success')
+        flash('Thank you for reporting this user. Our admins will review them soon.', 'success')
         return redirect(url_for('main.profile', user_id=user_id))
 
     return render_template('events/report_event.html', form=form, user=reported_user, report_type='user')

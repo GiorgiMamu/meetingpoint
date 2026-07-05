@@ -110,7 +110,7 @@ def test_blocked_user_restrictions(client, app):
         event_id = event.id
 
     response = client.post(f'/events/{event_id}/bookmark', follow_redirects=True)
-    assert b'Event bookmarked!' in response.data
+    assert b'Event bookmarked' in response.data
 
     with app.app_context():
         assert Bookmark.query.filter_by(user_id=user_id, event_id=event_id).first() is not None

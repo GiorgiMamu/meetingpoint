@@ -31,7 +31,7 @@
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
-                        <option value="">All Statuses</option>
+                        <option value="">All statuses</option>
                         <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
                         <option value="reviewed" {% if status_filter == 'reviewed' %}selected{% endif %}>Reviewed</option>
                         <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
@@ -41,20 +41,20 @@
                 <div class="col-md-3">
                     <label class="form-label">Type</label>
                     <select name="type" class="form-select">
-                        <option value="">All Types</option>
-                        <option value="user" {% if report_type == 'user' %}selected{% endif %}>User Reports</option>
-                        <option value="event" {% if report_type == 'event' %}selected{% endif %}>Event Reports</option>
+                        <option value="">All types</option>
+                        <option value="user" {% if report_type == 'user' %}selected{% endif %}>User reports</option>
+                        <option value="event" {% if report_type == 'event' %}selected{% endif %}>Event reports</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Sort</label>
                     <select name="sort" class="form-select">
-                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
-                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest first</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest first</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                    <button type="submit" class="btn btn-primary w-100">Apply filters</button>
                 </div>
             </form>
         </div>
@@ -72,7 +72,7 @@
                             <th>Type</th>
                             <th>Reason</th>
                             <th>Status</th>
-                            <th>Reported At</th>
+                            <th>Reported at</th>
                             <th>Action</th>
                         </tr>
                     </thead>

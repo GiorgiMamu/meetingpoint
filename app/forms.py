@@ -258,7 +258,7 @@ class ReportForm(FlaskForm):
         Length(min=10, max=1000, message='Please provide at least 10 characters describing the issue.')
     ])
 
-    submit = SubmitField('Submit Report')
+    submit = SubmitField('Submit report')
 
 
 class AdminReportFilterForm(FlaskForm):

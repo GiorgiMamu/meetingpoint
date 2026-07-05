@@ -17,120 +17,112 @@
 <div class="search-bar mb-4">
     <form action="{{ url_for('main.discover') }}" id="discover-form" method="GET">
 
-        <div class="row g-2 mb-2">
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold mb-1">Search</label>
-                <input class="form-control" name="q" placeholder="Keywords..."
+        <div class="search-inline-row d-flex flex-wrap flex-lg-nowrap gap-2 align-items-end">
+            <div class="search-keywords flex-grow-1">
+                <label class="form-label small fw-semibold mb-2">Search keywords</label>
+                <input class="form-control" name="q" placeholder="Find events..."
                        type="text" value="{{ keyword }}">
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold mb-1">Category</label>
-                <select class="form-select" name="category">
-                    <option value="">All categories</option>
-                    {% for value, label in categories %}
-                    <option {% if selected_category == value %}selected{% endif %} value="{{ value }}">
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">From</label>
-                <input class="form-control" name="date_from" type="date" value="{{ date_from }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">To</label>
-                <input class="form-control" name="date_to" type="date" value="{{ date_to }}">
-            </div>
-            <div class="col-md-1 d-flex align-items-end">
-                <button class="btn btn-primary w-100" type="submit">Go</button>
-            </div>
+            <button class="btn btn-outline-success btn-sm search-submit-btn" type="submit">Search</button>
+            <button aria-controls="discover-filters-collapse" aria-expanded="{% if filters_open %}true{% else %}false{% endif %}"
+                    class="btn btn-outline-success btn-sm search-toggle-btn" data-bs-target="#discover-filters-collapse"
+                    data-bs-toggle="collapse" type="button">
+                Filters ✨
+            </button>
         </div>
 
+        <div class="collapse mt-3 {% if filters_open %}show{% endif %}" id="discover-filters-collapse">
+            <div class="search-filters-panel">
+                <div class="row g-3 mb-3 pb-3 search-section-divider align-items-end">
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold mb-2">Category</label>
+                        <select class="form-select" name="category">
+                            <option value="">All categories</option>
+                            {% for value, label in categories %}
+                            <option {% if selected_category == value %}selected{% endif %} value="{{ value }}">
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold mb-2">From Date</label>
+                        <input class="form-control" name="date_from" type="date" value="{{ date_from }}">
+                    </div>
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold mb-2">To Date</label>
+                        <input class="form-control" name="date_to" type="date" value="{{ date_to }}">
+                    </div>
+                </div>
 
-        <!-- Advanced filters -->
-        <div class="row g-2">
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Mood tag(s)</label>
-                <input class="form-control" name="mood" placeholder="e.g. adventurous"
-                       type="text" value="{{ mood }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Min participants</label>
-                <input class="form-control" min="1" name="size_min"
-                       placeholder="e.g. 5" type="number" value="{{ size_min }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Max participants</label>
-                <input class="form-control" min="1" name="size_max"
-                       placeholder="e.g. 20" type="number" value="{{ size_max }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Max price</label>
-                <input type="number" name="price_max" class="form-control"
-                       placeholder="e.g. 10" min="0" step="0.01"
-                       value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label small fw-semibold mb-1">Currency</label>
-                <select name="price_currency" class="form-select" {% if free_only %}disabled{% endif %}>
-                    {% for code in ['GEL','USD','EUR','GBP','TRY','RUB'] %}
-                        <option value="{{ code }}" {% if price_currency == code %}selected{% endif %}>{{ code }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <div class="form-check mb-2">
-                    <input {% if free_only %}checked{% endif %} class="form-check-input"
-                           id="free_only" name="free_only" type="checkbox" value="1">
-                    <label class="form-check-label" for="free_only">Free</label>
+                <div class="row g-3 mb-3 pb-3 search-section-divider align-items-end">
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold mb-2">Mood / Vibe</label>
+                        <input class="form-control" name="mood" placeholder="e.g. adventurous"
+                               type="text" value="{{ mood }}">
+                    </div>
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold mb-2">Max Price</label>
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <input type="number" name="price_max" class="form-control"
+                                       placeholder="Amount" min="0" step="0.01"
+                                       value="{{ price_max }}" {% if free_only %}disabled{% endif %}>
+                            </div>
+                            <div class="col-5">
+                                <select name="price_currency" class="form-select" {% if free_only %}disabled{% endif %}>
+                                    {% for code in ['GEL','USD','EUR','GBP','TRY','RUB'] %}
+                                        <option value="{{ code }}" {% if price_currency == code %}selected{% endif %}>{{ code }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 d-flex align-items-end justify-content-between gap-3">
+                        <div class="form-check mb-0">
+                            <input {% if free_only %}checked{% endif %} class="form-check-input"
+                                   id="free_only" name="free_only" type="checkbox" value="1">
+                            <label class="form-check-label" for="free_only">Free events only</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-4 position-relative">
+                        <label class="form-label small fw-semibold mb-2">Location</label>
+                        <input class="form-control" id="radius-location-input" placeholder="Type a location..."
+                               type="text">
+                        <div class="alert alert-danger py-1 px-2 position-absolute" id="radius-location-error"
+                             style="display:none; left:0; right:0; top:100%; margin-top:0.5rem; z-index:5; font-size:0.9rem; opacity:1; transition: opacity .3s ease;">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label small fw-semibold mb-2">Radius (km)</label>
+                        <input class="form-control" max="500" min="1"
+                               name="radius_km" placeholder="10" type="number" value="{{ radius_km }}">
+                    </div>
+                    <input id="center_lat" name="center_lat" type="hidden" value="{{ center_lat }}">
+                    <input id="center_lng" name="center_lng" type="hidden" value="{{ center_lng }}">
+                    <input id="filters_open" name="filters_open" type="hidden" value="{% if filters_open %}1{% endif %}">
+                    <input id="map_open" name="map_open" type="hidden" value="{% if map_open %}1{% endif %}">
+                    <div class="col-lg-3 d-flex gap-2 align-items-center">
+                        <button class="btn btn-outline-success btn-sm search-submit-btn" id="set-location-btn" type="button">Apply location</button>
+                        <button class="btn btn-outline-success btn-sm search-map-btn" id="toggle-map-btn" type="button">{% if map_open %}Hide map{% else %}Show map{% endif %}</button>
+                        <a class="btn btn-outline-success btn-sm search-reset-btn" href="{{ url_for('main.discover') }}">Reset</a>
+                    </div>
+                    {% if center_lat and center_lng %}
+                    <div class="col-12">
+                        <small class="text-muted d-block">📌 Center: {{ center_lat|float|round(4) }}, {{ center_lng|float|round(4) }}</small>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <a class="btn btn-outline-secondary w-100 mb-2" href="{{ url_for('main.discover') }}">Clear</a>
-            </div>
-        </div>
-
-        <!-- Location radius filter -->
-        <div class="row g-2 mt-1 align-items-end">
-            <div class="col-md-3 position-relative">
-                <label class="form-label small fw-semibold mb-1">Enter a location</label>
-                <input class="form-control" id="radius-location-input" placeholder="Type a location..."
-                       type="text">
-                <div class="alert alert-danger py-1 px-2 position-absolute" id="radius-location-error"
-                     style="display:none; left:0; right:0; top:100%; margin-top:0.5rem; z-index:5; font-size:0.9rem; opacity:1; transition: opacity .3s ease;">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Radius (km)</label>
-                <input class="form-control" max="500" min="1"
-                       name="radius_km" placeholder="e.g. 10" type="number" value="{{ radius_km }}">
-            </div>
-            <input id="center_lat" name="center_lat" type="hidden" value="{{ center_lat }}">
-            <input id="center_lng" name="center_lng" type="hidden" value="{{ center_lng }}">
-            <div class="col-md-2">
-                <button class="btn btn-outline-primary w-100" id="set-location-btn" type="button">Apply location
-                </button>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-outline-secondary w-100" id="toggle-map-btn" type="button">
-                    Show map
-                </button>
-            </div>
-            {% if center_lat and center_lng %}
-            <div class="col-md-3">
-                <span class="text-muted small">
-                    📌 Center set: {{ center_lat|float|round(4) }}, {{ center_lng|float|round(4) }}
-                </span>
-            </div>
-            {% endif %}
         </div>
 
     </form>
 </div>
 
-<!-- Map View -->
-<div class="card mb-4" hidden id="map-section">
+<div class="card mb-4 mt-3" {% if not map_open %}hidden{% endif %} id="map-section">
     <div class="card-body p-0">
         <div id="map" style="height: 380px; border-radius: var(--radius);"></div>
         <div class="text-muted small mt-1 px-2 pb-2">
@@ -225,7 +217,7 @@
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
                        price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
-                       center_lat=center_lat, center_lng=center_lng) }}">Previous</a>
+                       center_lat=center_lat, center_lng=center_lng, filters_open=filters_open, map_open=map_open) }}">Previous</a>
         </li>
         {% endif %}
         <li class="page-item disabled">
@@ -237,7 +229,7 @@
                        q=keyword, category=selected_category, date_from=date_from,
                        date_to=date_to, mood=mood, size_min=size_min, size_max=size_max,
                        price_max=price_max, price_currency=price_currency, free_only=free_only, radius_km=radius_km,
-                       center_lat=center_lat, center_lng=center_lng) }}">Next</a>
+                       center_lat=center_lat, center_lng=center_lng, filters_open=filters_open, map_open=map_open) }}">Next</a>
         </li>
         {% endif %}
     </ul>
@@ -257,53 +249,154 @@
 {% endif %}
 
 <style>
-    /* ── Beautified search bar ── */
+    /* ── Search Bar Styling ── */
     .search-bar {
-        background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65));
-        border: 1px solid rgba(45, 106, 79, 0.12);
-        border-radius: 16px;
-        padding: 1.5rem 1.5rem 1.25rem;
-        box-shadow: 0 4px 18px rgba(45, 106, 79, 0.08);
-        backdrop-filter: blur(6px);
+        background: var(--white);
+        border: 1px solid rgba(45, 106, 79, 0.08);
+        border-radius: 14px;
+        padding: 1rem 1.25rem 1.15rem;
+        box-shadow: 0 2px 10px rgba(0,0,0, 0.04);
     }
     .search-bar .form-label {
-        color: var(--forest-dark, #2d6a4f);
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-        font-size: 0.72rem;
+        color: var(--forest-dark, #1F3D2B);
+        letter-spacing: 0.01em;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 0.45rem;
+        display: block;
+    }
+    .search-inline-row {
+        gap: 0.75rem;
+    }
+    .search-keywords {
+        min-width: 240px;
     }
     .search-bar .form-control,
     .search-bar .form-select {
-        border: 1px solid rgba(45, 106, 79, 0.18);
-        border-radius: 10px;
-        background-color: rgba(255,255,255,0.9);
-        transition: border-color .15s ease, box-shadow .15s ease;
+        border: 1px solid rgba(45, 106, 79, 0.14);
+        border-radius: 8px;
+        background-color: rgba(255,255,255,1);
+        transition: all 0.2s ease;
+        font-size: 0.94rem;
+        padding: 0.62rem 0.9rem;
     }
     .search-bar .form-control:focus,
     .search-bar .form-select:focus {
-        border-color: var(--forest-dark, #2d6a4f);
-        box-shadow: 0 0 0 0.2rem rgba(45, 106, 79, 0.15);
+        border-color: var(--forest-dark, #1F3D2B);
+        box-shadow: 0 0 0 3px rgba(31, 61, 43, 0.1);
+        outline: none;
     }
-    .search-bar .btn-primary {
-        border-radius: 10px;
+    .search-bar .btn-success {
+        background-color: var(--moss-dark, #3F5F45);
+        border-color: var(--moss-dark, #3F5F45);
+        border-radius: 8px;
         font-weight: 600;
+        min-height: 2.7rem;
+        padding: 0.55rem 1rem;
+        transition: all 0.2s ease;
+    }
+    .search-bar .btn-success:hover,
+    .search-bar .btn-success:focus {
+        background-color: var(--forest-light, #4E7A5A);
+        border-color: var(--forest-light, #4E7A5A);
+        box-shadow: 0 0 0 3px rgba(63, 95, 69, 0.12);
     }
     .search-bar .btn-outline-primary,
     .search-bar .btn-outline-secondary {
-        border-radius: 10px;
+        border-radius: 8px;
+        border-color: rgba(45, 106, 79, 0.2);
+        color: var(--forest-dark, #1F3D2B);
+        font-weight: 500;
+        transition: all 0.2s ease;
     }
-    .search-bar hr,
-    .search-bar > form > .row + .row {
-        margin-top: 0.5rem;
+    .search-bar .btn-outline-success {
+        border-radius: 8px;
+        border-color: var(--moss-dark, #3F5F45);
+        color: var(--moss-dark, #3F5F45);
+        font-weight: 600;
+        transition: all 0.2s ease;
     }
-    .search-bar .row.g-2:not(:last-child) {
-        padding-bottom: 0.5rem;
-        border-bottom: 1px dashed rgba(45, 106, 79, 0.12);
-        margin-bottom: 0.5rem;
+    .search-bar .btn-outline-success:hover,
+    .search-bar .btn-outline-success:focus {
+        background-color: var(--moss-dark, #3F5F45);
+        border-color: var(--moss-dark, #3F5F45);
+        color: var(--white);
+        box-shadow: 0 0 0 3px rgba(63, 95, 69, 0.12);
+    }
+    .search-bar .btn-outline-primary:hover {
+        background-color: rgba(45, 106, 79, 0.08);
+        border-color: var(--forest-dark, #1F3D2B);
+    }
+    .search-bar .btn-outline-secondary:hover {
+        background-color: rgba(45, 106, 79, 0.05);
+        border-color: var(--forest-dark, #1F3D2B);
+    }
+    .search-toolbar {
+        min-height: 0;
+        margin-top: 0.75rem;
+    }
+    .search-filters-panel {
+        padding-top: 0.5rem;
+    }
+    .search-section-divider {
+        border-bottom: 1px solid rgba(45, 106, 79, 0.08);
+    }
+    .search-bar .collapse {
+        transition: height 0.2s ease;
+    }
+    .search-bar .form-check {
+        margin-bottom: 0;
+    }
+    .search-bar .form-check-input {
+        border-radius: 5px;
+        border: 1px solid rgba(45, 106, 79, 0.2);
+        transition: all 0.2s ease;
+    }
+    .search-bar .form-check-input:checked {
+        background-color: var(--forest-dark, #1F3D2B);
+        border-color: var(--forest-dark, #1F3D2B);
+    }
+    .search-submit-btn,
+    .search-reset-btn,
+    .search-toggle-btn,
+    .search-map-btn {
+        min-height: 2.7rem;
+        padding: 0.55rem 0.95rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .search-map-btn {
+        border-color: rgba(45, 106, 79, 0.2);
+        color: var(--charcoal-light);
+    }
+    .search-map-btn:hover,
+    .search-map-btn:focus {
+        background-color: rgba(45, 106, 79, 0.05);
+        border-color: var(--forest-dark, #1F3D2B);
+        color: var(--forest-dark, #1F3D2B);
+    }
+    /* restore default button sizing; keep small-screen behavior for the keywords field */
+    /* avoid keeping hover/focus visual state after click for the filters toggle */
+    .search-toggle-btn.btn-outline-success:focus,
+    .search-toggle-btn.btn-outline-success:active,
+    .search-toggle-btn.btn-outline-success:focus-visible {
+        background-color: transparent !important;
+        color: var(--moss-dark) !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    @media (max-width: 767px) {
+        .search-keywords {
+            flex-basis: 100%;
+        }
     }
     #radius-location-input {
-        border-radius: 10px;
+        border-radius: 8px;
     }
+
 
     /* ── Card footer button alignment ── */
     .card-footer-btn {
@@ -332,6 +425,7 @@
 <script>
     var mapSection = document.getElementById('map-section');
     var toggleMapBtn = document.getElementById('toggle-map-btn');
+    var filtersCollapse = document.getElementById('discover-filters-collapse');
     var mapInitialized = false;
     var map = null;
     var markers = null;
@@ -346,22 +440,21 @@
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-var markers = L.layerGroup();
-
+        var markers = L.layerGroup();
         var events = [
-    {% for event in events %}
-    {% if event.lat and event.lng %}
-                {
-        lat: {{ event.lat }},
-        lng: {{ event.lng }},
-        title: {{ event.title | tojson }},
-            url: "{{ url_for('main.event_detail', event_id=event.id) }}",
-        time: {{ event.event_time.strftime('%b %d, %Y') | tojson }},
-        location: {{ (event.location_text or '') | tojson }}
-    },
-    {% endif %}
-    {% endfor %}
-];
+            {% for event in events %}
+            {% if event.lat and event.lng %}
+            {
+                lat: {{ event.lat }},
+                lng: {{ event.lng }},
+                title: {{ event.title | tojson }},
+                url: "{{ url_for('main.event_detail', event_id=event.id) }}",
+                time: {{ event.event_time.strftime('%b %d, %Y') | tojson }},
+                location: {{ (event.location_text or '') | tojson }}
+            },
+            {% endif %}
+            {% endfor %}
+        ];
 
         events.forEach(function (e) {
             var marker = L.marker([e.lat, e.lng]);
@@ -375,17 +468,17 @@ var markers = L.layerGroup();
 
         map.addLayer(markers);
 
-var radiusCenterMarker = null;
-{% if center_lat and center_lng %}
-radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], {
+        var radiusCenterMarker = null;
+        {% if center_lat and center_lng %}
+        radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], {
             icon: L.divIcon({
                 className: '',
                 html: '<div style="background:var(--forest-dark);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
                 iconSize: [14, 14],
                 iconAnchor: [7, 7]
             })
-}).addTo(map);
-{% endif %}
+        }).addTo(map);
+        {% endif %}
 
         map.on('click', function (e) {
             var lat = e.latlng.lat.toFixed(6);
@@ -416,6 +509,7 @@ radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], 
     }
 
     toggleMapBtn.addEventListener('click', function () {
+        if (!mapSection) return;
         var opening = mapSection.hasAttribute('hidden');
         if (opening) {
             mapSection.removeAttribute('hidden');
@@ -429,6 +523,17 @@ radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], 
         mapSection.setAttribute('hidden', '');
         toggleMapBtn.textContent = 'Show map';
     });
+
+    if (filtersCollapse) {
+        // when filters hidden: hide map
+        filtersCollapse.addEventListener('hide.bs.collapse', function () {
+            if (mapSection) {
+                mapSection.setAttribute('hidden', '');
+                if (toggleMapBtn) toggleMapBtn.textContent = 'Show map';
+            }
+        });
+
+    }
 
     // ── Map initialization ──
     // map created on demand
@@ -452,6 +557,32 @@ radiusCenterMarker = L.marker([{{ center_lat|float }}, {{ center_lng|float }}], 
         if (setLocationBtn) {
             setLocationBtn.addEventListener('click', function () {
                 geocodeRadiusLocation();
+            });
+        }
+
+        // Initialize map if server indicated it should be open
+        if (mapSection && !mapSection.hasAttribute('hidden')) {
+            try {
+                toggleMapBtn.textContent = 'Hide map';
+            } catch (e) {}
+            initMap();
+            setTimeout(function () {
+                if (map) map.invalidateSize();
+            }, 0);
+        }
+
+        // Ensure form submits include the open/closed state of filters and map
+        var discoverForm = document.getElementById('discover-form');
+        if (discoverForm) {
+            discoverForm.addEventListener('submit', function () {
+                var filtersOpenEl = document.getElementById('filters_open');
+                var mapOpenEl = document.getElementById('map_open');
+                if (filtersOpenEl) {
+                    filtersOpenEl.value = (filtersCollapse && filtersCollapse.classList.contains('show')) ? '1' : '';
+                }
+                if (mapOpenEl) {
+                    mapOpenEl.value = (mapSection && !mapSection.hasAttribute('hidden')) ? '1' : '';
+                }
             });
         }
     });

@@ -5,9 +5,9 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <a href="{{ url_for('main.event_detail', event_id=event.id) }}"
-               class="btn btn-outline-secondary btn-sm mb-3">← Back to event</a>
+               class="btn btn-outline-secondary btn-sm mb-3">Back to event</a>
             <a href="{{ url_for('main.host_dashboard') }}"
-               class="btn btn-outline-secondary btn-sm mb-3">← Back to dashboard</a>
+               class="btn btn-outline-secondary btn-sm mb-3">Back to dashboard</a>
             <h2>📊 Event Analytics: {{ event.title }}</h2>
             <p class="text-muted">{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</p>
         </div>
@@ -18,7 +18,7 @@
         <div class="col-md-3">
             <div class="card text-center border-success">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Attendance Rate</h6>
+                    <h6 class="card-title text-muted">Attendance rate</h6>
                     <h2 class="card-text text-success">{{ analytics.attendance_rate }}%</h2>
                 </div>
             </div>
@@ -26,7 +26,7 @@
         <div class="col-md-3">
             <div class="card text-center border-primary">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Total Approved</h6>
+                    <h6 class="card-title text-muted">Total approved</h6>
                     <h2 class="card-text text-primary">{{ analytics.approved_count }}</h2>
                 </div>
             </div>
@@ -34,7 +34,7 @@
         <div class="col-md-3">
             <div class="card text-center border-warning">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Pending Approvals</h6>
+                    <h6 class="card-title text-muted">Pending approvals</h6>
                     <h2 class="card-text text-warning">{{ analytics.pending_count }}</h2>
                 </div>
             </div>
@@ -55,7 +55,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header bg-light">
-                        <h5 class="mb-0">📈 Join Trend Over Time</h5>
+                        <h5 class="mb-0">📈 Join trend over time</h5>
                     </div>
                     <div class="card-body text-center">
                         <img src="{{ analytics.join_trend_chart }}" class="img-fluid">
@@ -94,15 +94,15 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">⏳ Approval Queue ({{ pending_participants | length }})</h5>
+                        <h5 class="mb-0">⏳ Approval queue ({{ pending_participants | length }})</h5>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>User Name</th>
+                                    <th>User name</th>
                                     <th>Email</th>
-                                    <th>Requested At</th>
+                                    <th>Requested at</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -143,7 +143,7 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">✓ Approved Participants ({{ approved_participants | length }})</h5>
+                    <h5 class="mb-0">✓ Approved participants ({{ approved_participants | length }})</h5>
                 </div>
                 {% if approved_participants %}
                     <div class="table-responsive">

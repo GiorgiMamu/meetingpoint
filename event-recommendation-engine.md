@@ -3,7 +3,7 @@
 This document explains how MeetingPoint's recommendation system works: what
 signals it uses, how scoring is calculated, and how the three supporting
 functions (`get_recommendations`, `get_mood_based_suggestions`,
-`get_trending_events`) fit together on the **For You** page.
+`get_trending_events`) fit together on the **For you** page.
 
 ## Overview
 

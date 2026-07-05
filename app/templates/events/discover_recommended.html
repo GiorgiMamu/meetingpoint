@@ -13,7 +13,7 @@
             {% endif %}
         </p>
     </div>
-    <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary btn-sm">← All events</a>
+    <a href="{{ url_for('main.discover') }}" class="btn btn-outline-secondary btn-sm">All events</a>
 </div>
 
 {% if mood_suggestions %}
@@ -184,7 +184,7 @@
         <ul class="pagination justify-content-center">
             {% if has_prev %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover_recommended', page=prev_num) }}">← Previous</a>
+                    <a class="page-link" href="{{ url_for('main.discover_recommended', page=prev_num) }}">Previous</a>
                 </li>
             {% endif %}
             <li class="page-item disabled">
@@ -192,7 +192,7 @@
             </li>
             {% if has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.discover_recommended', page=next_num) }}">Next →</a>
+                    <a class="page-link" href="{{ url_for('main.discover_recommended', page=next_num) }}">Next</a>
                 </li>
             {% endif %}
         </ul>
