@@ -7,6 +7,7 @@ from datetime import datetime
 from app import db
 from app.models import utcnow
 from flask_login import current_user
+from flask import url_for
 from flask_socketio import join_room, leave_room, emit
 
 logger = logging.getLogger(__name__)
@@ -92,12 +93,24 @@ def register_socket_events(socketio):
         db.session.commit()
 
         room = f'event_{event_id}'
+        # Include author's profile photo URL if available so clients can show it in chat
+        photo_url = None
+        if getattr(current_user, 'profile_photo', None):
+            try:
+                if current_user.profile_photo.startswith('http'):
+                    photo_url = current_user.profile_photo
+                else:
+                    photo_url = url_for('static', filename='uploads/' + current_user.profile_photo)
+            except Exception:
+                photo_url = None
+
         emit('new_message', {
             'id': msg.id,
             'content': content,
             'author_name': current_user.name,
             'author_id': current_user.id,
             'author_is_admin': current_user.is_admin(),
+            'author_profile_photo': photo_url,
             'timestamp': msg.timestamp.isoformat(),
             'event_id': event_id
         }, room=room)

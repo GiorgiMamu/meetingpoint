@@ -16,10 +16,15 @@
                           class="list-group-item d-flex justify-content-between align-items-center"
                           method="POST">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="avatar-initials-sm">
-                                {{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?'
-                                }}
-                            </div>
+                            {% if follower.profile_photo %}
+                                {% if follower.profile_photo.startswith('http') %}
+                                    <img class="avatar-img-sm" src="{{ follower.profile_photo }}" alt="{{ follower.name }}">
+                                {% else %}
+                                    <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + follower.profile_photo) }}" alt="{{ follower.name }}">
+                                {% endif %}
+                            {% else %}
+                                <div class="avatar-initials-sm">{{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?' }}</div>
+                            {% endif %}
                             <a class="text-decoration-none text-dark"
                                href="{{ url_for('main.profile', user_id=follower.id) }}">{{ follower.name }}</a>
                         </div>

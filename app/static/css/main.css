@@ -601,6 +601,16 @@ footer small {
     flex-shrink: 0;
 }
 
+/* Small avatar image (used in lists, chat, admin) */
+.avatar-img-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: block;
+}
+
 /* ── Large icon for empty states ── */
 .empty-state-icon {
     font-size: 3rem;

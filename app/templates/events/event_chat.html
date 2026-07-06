@@ -26,10 +26,17 @@
                         <div class="avatar-initials-sm flex-shrink-0">M</div>
                         {% else %}
                         <a class="text-decoration-none" href="{{ url_for('main.profile', user_id=msg.user_id) }}">
-                            <div class="avatar-initials-sm flex-shrink-0">
-                                {{ msg.author.name.strip()[0].upper() if msg.author.name and msg.author.name.strip()
-                                else '?' }}
-                            </div>
+                            {% if msg.author.profile_photo %}
+                                {% if msg.author.profile_photo.startswith('http') %}
+                                    <img class="avatar-img-sm flex-shrink-0" src="{{ msg.author.profile_photo }}" alt="{{ msg.author.name }}">
+                                {% else %}
+                                    <img class="avatar-img-sm flex-shrink-0" src="{{ url_for('static', filename='uploads/' + msg.author.profile_photo) }}" alt="{{ msg.author.name }}">
+                                {% endif %}
+                            {% else %}
+                                <div class="avatar-initials-sm flex-shrink-0">
+                                    {{ msg.author.name.strip()[0].upper() if msg.author.name and msg.author.name.strip() else '?' }}
+                                </div>
+                            {% endif %}
                         </a>
                         {% endif %}
                         <div style="max-width:70%;">
@@ -93,10 +100,18 @@
                     <span class="text-dark small fw-semibold">MeetingPoint Team</span>
                     {% else %}
                     <a class="text-decoration-none" href="{{ url_for('main.profile', user_id=event.host_id) }}">
+                        {% if event.host.profile_photo %}
+                            {% if event.host.profile_photo.startswith('http') %}
+                                <img class="avatar-img-sm" src="{{ event.host.profile_photo }}" alt="{{ event.host.name }}">
+                            {% else %}
+                                <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + event.host.profile_photo) }}" alt="{{ event.host.name }}">
+                            {% endif %}
+                        {% else %}
                         <div class="avatar-initials-sm">
                             {{ event.host.name.strip()[0].upper() if event.host.name and event.host.name.strip() else
                             '?' }}
                         </div>
+                        {% endif %}
                     </a>
                     <a class="text-decoration-none text-dark small fw-semibold"
                        href="{{ url_for('main.profile', user_id=event.host_id) }}">
@@ -115,9 +130,17 @@
                 {% for p in pending %}
                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                     <div class="d-flex align-items-center gap-2">
+                        {% if p.user.profile_photo %}
+                        {% if p.user.profile_photo.startswith('http') %}
+                            <img class="avatar-img-sm" src="{{ p.user.profile_photo }}" alt="{{ p.user.name }}">
+                        {% else %}
+                            <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + p.user.profile_photo) }}" alt="{{ p.user.name }}">
+                        {% endif %}
+                    {% else %}
                         <div class="avatar-initials-sm">
                             {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
                         </div>
+                    {% endif %}
                         <span class="small">{{ p.user.name }}</span>
                     </div>
                     <div class="d-flex gap-1">
@@ -254,22 +277,33 @@ var isHost = {{ 'true' if is_host else 'false' }};
         var profileUrl = "{{ url_for('main.profile', user_id=0) }}".replace('0', data.author_id);
 
         div.innerHTML =
-            (isAdminAuthor ? '<div class="avatar-initials-sm flex-shrink-0">' + initial + '</div>' :
-                '<a href="' + profileUrl + '" class="text-decoration-none">' +
-                '<div class="avatar-initials-sm flex-shrink-0">' + initial + '</div>' +
-                '</a>') +
-            '<div style="max-width:70%;">' +
-            '<div class="d-flex align-items-center gap-2' + (isOwn ? ' flex-row-reverse' : '') + '">' +
-            (isAdminAuthor ?
-                '<span class="text-dark fw-semibold small">MeetingPoint Team</span>' :
-                '<a href="' + profileUrl + '" class="text-decoration-none text-dark fw-semibold small">' + data.author_name + '</a>') +
-            '<span class="text-muted" style="font-size:0.75rem;">' + localTime + '</span>' +
-            deleteBtn +
-            '</div>' +
-            '<div class="rounded p-2 mt-1" style="background:' + (isOwn ? 'var(--forest-dark)' : '#f0f0f0') + '; color:' + (isOwn ? 'white' : 'var(--charcoal-dark)') + ';">' +
-            data.content +
-            '</div>' +
-            '</div>';
+            (function(){
+                var avatarHtml;
+                if (isAdminAuthor) {
+                    avatarHtml = '<div class="avatar-initials-sm flex-shrink-0">' + initial + '</div>';
+                } else if (data.author_profile_photo) {
+                    avatarHtml = '<a href="' + profileUrl + '" class="text-decoration-none">' +
+                        '<img src="' + data.author_profile_photo + '" class="avatar-img-sm flex-shrink-0" alt="' + (data.author_name || '') + '">' +
+                        '</a>';
+                } else {
+                    avatarHtml = '<a href="' + profileUrl + '" class="text-decoration-none">' +
+                        '<div class="avatar-initials-sm flex-shrink-0">' + initial + '</div>' +
+                        '</a>';
+                }
+                return avatarHtml +
+                    '<div style="max-width:70%;">' +
+                    '<div class="d-flex align-items-center gap-2' + (isOwn ? ' flex-row-reverse' : '') + '">' +
+                    (isAdminAuthor ?
+                        '<span class="text-dark fw-semibold small">MeetingPoint Team</span>' :
+                        '<a href="' + profileUrl + '" class="text-decoration-none text-dark fw-semibold small">' + data.author_name + '</a>') +
+                    '<span class="text-muted" style="font-size:0.75rem;">' + localTime + '</span>' +
+                    deleteBtn +
+                    '</div>' +
+                    '<div class="rounded p-2 mt-1" style="background:' + (isOwn ? 'var(--forest-dark)' : '#f0f0f0') + '; color:' + (isOwn ? 'white' : 'var(--charcoal-dark)') + ';">' +
+                    data.content +
+                    '</div>' +
+                    '</div>';
+            })();
 
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;

@@ -15,9 +15,15 @@
     {% for followed in following %}
     <a class="list-group-item list-group-item-action" href="{{ url_for('main.profile', user_id=followed.id) }}">
         <div class="d-flex align-items-center gap-2">
-            <div class="avatar-initials-sm">
-                {{ followed.name.strip()[0].upper() if followed.name and followed.name.strip() else '?' }}
-            </div>
+            {% if followed.profile_photo %}
+                {% if followed.profile_photo.startswith('http') %}
+                    <img class="avatar-img-sm" src="{{ followed.profile_photo }}" alt="{{ followed.name }}">
+                {% else %}
+                    <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + followed.profile_photo) }}" alt="{{ followed.name }}">
+                {% endif %}
+            {% else %}
+                <div class="avatar-initials-sm">{{ followed.name.strip()[0].upper() if followed.name and followed.name.strip() else '?' }}</div>
+            {% endif %}
             <div>
                 <div class="fw-semibold">{{ followed.name }}</div>
                 {% if followed.location %}

@@ -218,13 +218,19 @@
                 %}
                 <a class="d-flex align-items-center gap-2 text-decoration-none text-dark py-1 {% if is_anon_host %}pe-none{% endif %}"
                    href="{% if is_anon_host %}#{% else %}{{ url_for('main.profile', user_id=p.user_id) }}{% endif %}">
-                    <div class="avatar-initials-sm">
-                        {% if is_anon_host %}
-                        M
+                    {% if is_anon_host %}
+                        <div class="avatar-initials-sm">M</div>
+                    {% else %}
+                        {% if p.user.profile_photo %}
+                            {% if p.user.profile_photo.startswith('http') %}
+                                <img class="avatar-img-sm" src="{{ p.user.profile_photo }}" alt="{{ p.user.name }}">
+                            {% else %}
+                                <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + p.user.profile_photo) }}" alt="{{ p.user.name }}">
+                            {% endif %}
                         {% else %}
-                        {{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}
+                            <div class="avatar-initials-sm">{{ p.user.name.strip()[0].upper() if p.user.name and p.user.name.strip() else '?' }}</div>
                         {% endif %}
-                    </div>
+                    {% endif %}
                     <span class="small">
                             {% if is_anon_host %}
                                 MeetingPoint Team
@@ -283,9 +289,15 @@
                             <div class="d-flex align-items-center justify-content-between py-2 border-bottom follower-row {% if loop.index > 6 %}follower-hidden{% endif %}"
                                  data-name="{{ follower.name|lower }}">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-initials-sm">
-                                        {{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?' }}
-                                    </div>
+                                    {% if follower.profile_photo %}
+                                        {% if follower.profile_photo.startswith('http') %}
+                                            <img class="avatar-img-sm" src="{{ follower.profile_photo }}" alt="{{ follower.name }}">
+                                        {% else %}
+                                            <img class="avatar-img-sm" src="{{ url_for('static', filename='uploads/' + follower.profile_photo) }}" alt="{{ follower.name }}">
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="avatar-initials-sm">{{ follower.name.strip()[0].upper() if follower.name and follower.name.strip() else '?' }}</div>
+                                    {% endif %}
                                     <span class="small">{{ follower.name }}</span>
                                 </div>
                                 {% if already_joined %}
