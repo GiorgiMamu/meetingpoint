@@ -291,3 +291,35 @@ class AdminReportFilterForm(FlaskForm):
     ], validators=[Optional()])
 
     submit = SubmitField('Filter')
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current password', validators=[DataRequired()])
+    new_password = PasswordField('New password', validators=[
+        DataRequired(),
+        Length(min=8, max=BCRYPT_MAX_PASSWORD_CHARS),
+        bcrypt_max_bytes()
+    ])
+    confirm_password = PasswordField('Confirm new password', validators=[
+        DataRequired(),
+        EqualTo('new_password')
+    ])
+    submit = SubmitField('Change password')
+
+
+class ChangeEmailForm(FlaskForm):
+    new_email = SanitizedStringField('New email', validators=[
+        DataRequired(), Email(), Length(max=150)
+    ])
+    password = PasswordField('Current password', validators=[DataRequired()])
+    submit = SubmitField('Change email')
+
+    def validate_new_email(self, field):
+        from app.models import User
+        if User.query.filter_by(email=field.data.lower()).first():
+            raise ValidationError('That email is already registered.')
+
+
+class DeleteAccountForm(FlaskForm):
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Delete my account')

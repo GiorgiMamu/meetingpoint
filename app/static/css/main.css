@@ -717,3 +717,88 @@ footer small {
 .card-event .card-footer {
     margin-top: auto;
 }
+/* ── Modern card hover effect ── */
+.card {
+    transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.card-event:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(31,61,43,0.13);
+}
+
+/* ── Smooth page transitions ── */
+.container {
+    animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Better form focus ── */
+.form-control:focus, .form-select:focus {
+    border-color: var(--forest-light);
+    box-shadow: 0 0 0 3px rgba(78,122,90,0.18);
+}
+
+/* ── Notification badge on navbar ── */
+.nav-notif-badge {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-notif-badge .badge-dot {
+    position: absolute;
+    top: 2px;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    background: var(--rose-dark);
+    border-radius: 50%;
+    border: 2px solid var(--forest-dark);
+}
+
+/* ── Hero gradient animation ── */
+.hero {
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ── Better badge spacing ── */
+.badge {
+    letter-spacing: 0.03em;
+}
+
+/* ── Improved table hover ── */
+.table-hover tbody tr:hover {
+    background-color: var(--sand-light);
+    cursor: pointer;
+}
+
+/* ── Mobile nav improvements ── */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background: var(--forest-dark);
+        border-radius: 0 0 12px 12px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    .dropdown-menu {
+        background: var(--moss-dark);
+    }
+    .dropdown-item {
+        color: var(--sand-light);
+    }
+    .dropdown-item:hover {
+        background: var(--forest-light);
+        color: var(--white);
+    }
+}

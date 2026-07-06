@@ -1885,3 +1885,99 @@ def admin_log_detail(log_id):
     log = AuditLog.query.get_or_404(log_id)
 
     return render_template('admin/log_detail.html', log=log)
+
+
+# ============================================================
+# SETTINGS
+# ============================================================
+
+@main.route('/settings')
+@login_required
+@active_required
+def settings():
+    """Settings page."""
+    from app.forms import ChangePasswordForm, ChangeEmailForm, DeleteAccountForm
+    pw_form = ChangePasswordForm(prefix='pw')
+    email_form = ChangeEmailForm(prefix='email')
+    delete_form = DeleteAccountForm(prefix='delete')
+    return render_template('settings.html',
+                           pw_form=pw_form,
+                           email_form=email_form,
+                           delete_form=delete_form)
+
+
+@main.route('/settings/change-password', methods=['POST'])
+@login_required
+@active_required
+@limiter.limit("5 per minute")
+def change_password():
+    """Change password from settings page."""
+    from app.forms import ChangePasswordForm, ChangeEmailForm, DeleteAccountForm
+    pw_form = ChangePasswordForm(prefix='pw')
+    email_form = ChangeEmailForm(prefix='email')
+    delete_form = DeleteAccountForm(prefix='delete')
+
+    if pw_form.validate_on_submit():
+        if not bcrypt.check_password_hash(current_user.password_hash, pw_form.current_password.data):
+            flash('Current password is incorrect.', 'danger')
+            return render_template('settings.html', pw_form=pw_form,
+                                   email_form=email_form, delete_form=delete_form)
+        if bcrypt.check_password_hash(current_user.password_hash, pw_form.new_password.data):
+            flash('New password cannot be the same as the current password.', 'danger')
+            return render_template('settings.html', pw_form=pw_form,
+                                   email_form=email_form, delete_form=delete_form)
+        current_user.password_hash = bcrypt.generate_password_hash(
+            pw_form.new_password.data).decode('utf-8')
+        db.session.commit()
+        logger.info(f'Password changed: {current_user.email}')
+        flash('Password changed successfully.', 'success')
+    return redirect(url_for('main.settings'))
+
+
+@main.route('/settings/change-email', methods=['POST'])
+@login_required
+@active_required
+@limiter.limit("3 per minute")
+def change_email():
+    """Change email address from settings page."""
+    from app.forms import ChangePasswordForm, ChangeEmailForm, DeleteAccountForm
+    pw_form = ChangePasswordForm(prefix='pw')
+    email_form = ChangeEmailForm(prefix='email')
+    delete_form = DeleteAccountForm(prefix='delete')
+
+    if email_form.validate_on_submit():
+        if not bcrypt.check_password_hash(current_user.password_hash, email_form.password.data):
+            flash('Password is incorrect.', 'danger')
+            return render_template('settings.html', pw_form=pw_form,
+                                   email_form=email_form, delete_form=delete_form)
+        new_email = email_form.new_email.data.lower()
+        current_user.email = new_email
+        current_user.is_active = False
+        db.session.commit()
+        send_verification_email(current_user)
+        logger.info(f'Email change requested: {current_user.email}')
+        logout_user()
+        flash('Email updated. Please verify your new email address before logging in.', 'info')
+        return redirect(url_for('main.login'))
+    return redirect(url_for('main.settings'))
+
+
+@main.route('/settings/delete-account', methods=['POST'])
+@login_required
+@limiter.limit("3 per hour")
+def delete_account():
+    """Permanently delete user account."""
+    from app.forms import DeleteAccountForm
+    delete_form = DeleteAccountForm(prefix='delete')
+    if delete_form.validate_on_submit():
+        if not bcrypt.check_password_hash(current_user.password_hash, delete_form.password.data):
+            flash('Password is incorrect.', 'danger')
+            return redirect(url_for('main.settings'))
+        user = current_user._get_current_object()
+        logout_user()
+        db.session.delete(user)
+        db.session.commit()
+        logger.info(f'Account deleted: {user.email}')
+        flash('Your account has been permanently deleted.', 'info')
+        return redirect(url_for('main.index'))
+    return redirect(url_for('main.settings'))

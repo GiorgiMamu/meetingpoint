@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Settings — MeetingPoint{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <h2 class="mb-4">Settings</h2>
+
+        <!-- Change password -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="section-title">Change password</h5>
+                <form method="POST" action="{{ url_for('main.change_password') }}">
+                    {{ pw_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ pw_form.current_password.label(class="form-label") }}
+                        {{ pw_form.current_password(class="form-control") }}
+                        {% for e in pw_form.current_password.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ pw_form.new_password.label(class="form-label") }}
+                        {{ pw_form.new_password(class="form-control") }}
+                        {% for e in pw_form.new_password.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ pw_form.confirm_password.label(class="form-label") }}
+                        {{ pw_form.confirm_password(class="form-control") }}
+                        {% for e in pw_form.confirm_password.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    {{ pw_form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+
+        <!-- Change email -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="section-title">Change email</h5>
+                <p class="text-muted small">You will be logged out and need to verify your new email.</p>
+                <form method="POST" action="{{ url_for('main.change_email') }}">
+                    {{ email_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ email_form.new_email.label(class="form-label") }}
+                        {{ email_form.new_email(class="form-control", placeholder="New email address") }}
+                        {% for e in email_form.new_email.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ email_form.password.label(class="form-label") }}
+                        {{ email_form.password(class="form-control", placeholder="Confirm with current password") }}
+                        {% for e in email_form.password.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    {{ email_form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete account -->
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="section-title" style="border-color: var(--rose-dark); color: var(--rose-dark);">
+                    Delete account
+                </h5>
+                <p class="text-muted small">This is permanent and cannot be undone. All your events, messages and data will be deleted.</p>
+                <form method="POST" action="{{ url_for('main.delete_account') }}"
+                      onsubmit="return confirm('Are you absolutely sure? This cannot be undone.')">
+                    {{ delete_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ delete_form.password.label(class="form-label") }}
+                        {{ delete_form.password(class="form-control", placeholder="Enter your password to confirm") }}
+                        {% for e in delete_form.password.errors %}
+                            <div class="text-danger small mt-1">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+                    {{ delete_form.submit(class="btn btn-danger") }}
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
