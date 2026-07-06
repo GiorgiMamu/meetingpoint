@@ -147,8 +147,13 @@
             <a class="text-decoration-none text-reset d-block"
                href="{{ url_for('main.event_detail', event_id=event.id) }}">
                 {% if event.photo %}
-                <img alt="{{ event.title }} event photo"
-                     class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+                    {% if event.photo.startswith('http') %}
+                        <img alt="{{ event.title }} event photo"
+                             class="card-img-top" src="{{ event.photo }}">
+                    {% else %}
+                        <img alt="{{ event.title }} event photo"
+                             class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+                    {% endif %}
                 {% else %}
                 <div class="gradient-placeholder">
                     <span class="gradient-placeholder-icon">🗓️</span>
@@ -194,6 +199,9 @@
                         {% endif %}
                     {% elif event.host_id == current_user.id %}
                         <span class="btn btn-sm btn-secondary disabled card-footer-btn">Host</span>
+                    {% elif current_user.is_admin() %}
+                        <a href="{{ url_for('main.event_chat', event_id=event.id) }}"
+                           class="btn btn-sm btn-outline-primary card-footer-btn">Chat</a>
                     {% else %}
                         <form method="POST" action="{{ url_for('main.join_event', event_id=event.id) }}" class="m-0">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

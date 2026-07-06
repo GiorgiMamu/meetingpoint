@@ -1,21 +1,37 @@
 import html
+import io
 import math
 import os
 import time
 import uuid
+import logging
 from datetime import timedelta
 
 import bleach
 import requests
 from PIL import Image
-from flask import current_app
-from flask import url_for
+from flask import current_app, url_for
 from flask_mail import Message
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from geopy.geocoders import Nominatim
 from itsdangerous import URLSafeTimedSerializer
 
 from app import mail
+
+# Initialize Cloudinary safely
+try:
+    import cloudinary
+    import cloudinary.uploader
+
+    cloudinary.config(
+        cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.environ.get('CLOUDINARY_API_KEY'),
+        api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+    )
+except ImportError:
+    cloudinary = None
+
+logger = logging.getLogger(__name__)
 
 
 def sanitize(value):
@@ -41,12 +57,11 @@ def verify_token(token, salt, max_age=3600):
 
 def send_email(to, subject, body):
     sender = (
-        current_app.config.get('MAIL_USERNAME')
-        or current_app.config.get('MAIL_DEFAULT_SENDER')
+            current_app.config.get('MAIL_USERNAME')
+            or current_app.config.get('MAIL_DEFAULT_SENDER')
     )
 
     if not sender:
-        import logging
         logging.getLogger(__name__).warning(
             f'Email not sent to {to}: no sender configured.'
         )
@@ -60,10 +75,12 @@ def send_email(to, subject, body):
     )
 
     if not current_app.config.get('TESTING'):
-        mail.send(msg)
+        try:
+            mail.send(msg)
+        except Exception as e:
+            logging.getLogger(__name__).error(f'Failed to send email to {to}: {e}')
 
     return msg
-
 
 def send_verification_email(user):
     token = generate_token(user.email, salt='email-confirm')
@@ -99,38 +116,70 @@ If you did not request a password reset, ignore this email.
 
 
 def save_event_photo(file):
-    """Save and optimize an uploaded event photo. Returns the filename."""
-    ext = file.filename.rsplit('.', 1)[-1].lower()
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
+    """Save and optimize an uploaded event photo. Supports Cloudinary and Local fallback."""
+    # Defend against Python 3.14 gevent stream recursive lookups by reading into memory first
+    try:
+        file.seek(0)
+        file_bytes = file.read()
+        in_memory_file = io.BytesIO(file_bytes)
+        in_memory_file_cloudinary = io.BytesIO(file_bytes)
+    except Exception as e:
+        logger.error(f"Failed reading image file buffer: {e}")
+        return None
 
-    img = Image.open(file)
-    img = img.convert('RGB')
+    # Fallback to local storage if Cloudinary variables are not configured
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
+        try:
+            ext = file.filename.rsplit('.', 1)[-1].lower() if file.filename else 'jpg'
+            filename = f"{uuid.uuid4().hex}.{ext}"
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
 
-    # Resize to max 1200px width while keeping aspect ratio
-    max_width = 1200
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_height = int(img.height * ratio)
-        img = img.resize((max_width, new_height), Image.LANCZOS)
+            img = Image.open(in_memory_file)
+            img = img.convert('RGB')
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width, new_height), Image.LANCZOS)
 
-    img.save(filepath, optimize=True, quality=85)
-    return filename
+            img.save(filepath, optimize=True, quality=85)
+            return filename
+        except Exception as e:
+            logger.error(f"Local event image optimization failed: {e}")
+            return None
+
+    try:
+        # Pass pure memory stream cleanly to Cloudinary API wrapper
+        upload_result = cloudinary.uploader.upload(
+            in_memory_file_cloudinary,
+            folder="meetingpoint_events"
+        )
+        return upload_result['secure_url']
+    except Exception as e:
+        logger.error(f"Cloudinary event upload failed: {e}")
+        return None
 
 
-def delete_event_photo(filename):
-    """Delete an event photo from disk."""
-    if not filename:
+def delete_event_photo(filename_or_url):
+    """Delete an event photo from disk or Cloudinary."""
+    if not filename_or_url:
         return
-    filepath = os.path.join(current_app.root_path, 'static', 'uploads', filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
+
+    if filename_or_url.startswith('http') and cloudinary is not None:
+        try:
+            public_id = "meetingpoint_events/" + filename_or_url.split('/')[-1].rsplit('.', 1)[0]
+            cloudinary.uploader.destroy(public_id)
+        except Exception as e:
+            logger.error(f"Cloudinary deletion failed: {e}")
+    else:
+        filepath = os.path.join(current_app.root_path, 'static', 'uploads', filename_or_url)
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
 
 def send_cancellation_emails(event, participants):
-    """Send cancellation notification to all participants of an event."""
     sent = []
     for participation in participants:
         user = participation.user
@@ -151,10 +200,6 @@ We're sorry for the inconvenience.
 
 
 def geocode_location(location_text):
-    """
-    Convert a location text string to (lat, lng) tuple.
-    Returns (None, None) if geocoding fails.
-    """
     if not location_text or not location_text.strip():
         return None, None
     try:
@@ -164,16 +209,11 @@ def geocode_location(location_text):
             return location.latitude, location.longitude
         return None, None
     except (GeocoderTimedOut, GeocoderServiceError) as e:
-        import logging
         logging.getLogger(__name__).warning(f'Geocoding failed for "{location_text}": {e}')
         return None, None
 
 
 def haversine_distance(lat1, lng1, lat2, lng2):
-    """
-    Calculate distance in kilometers between two lat/lng points
-    using the Haversine formula.
-    """
     R = 6371  # Earth radius in km
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
@@ -184,10 +224,6 @@ def haversine_distance(lat1, lng1, lat2, lng2):
 
 
 def filter_events_by_radius(events, center_lat, center_lng, radius_km):
-    """
-    Filter a list of Event objects to those within radius_km
-    of the given center coordinates. Events without lat/lng are excluded.
-    """
     result = []
     for event in events:
         if event.lat is not None and event.lng is not None:
@@ -198,26 +234,16 @@ def filter_events_by_radius(events, center_lat, center_lng, radius_km):
 
 
 _exchange_cache = {'rates': {}, 'timestamp': 0}
-_CACHE_TTL = 3600  # 1 hour
+_CACHE_TTL = 3600
 
 
 def get_exchange_rates():
-    """
-    Fetch exchange rates from frankfurter.app with 1-hour caching.
-    Returns dict of currency -> rate relative to GEL.
-    Falls back to hardcoded rates if API is unavailable.
-    """
     now = time.time()
     if _exchange_cache['rates'] and (now - _exchange_cache['timestamp']) < _CACHE_TTL:
         return _exchange_cache['rates']
 
     fallback_rates = {
-        'GEL': 1.0,
-        'USD': 2.75,
-        'EUR': 2.95,
-        'GBP': 3.45,
-        'TRY': 0.085,
-        'RUB': 0.030,
+        'GEL': 1.0, 'USD': 2.75, 'EUR': 2.95, 'GBP': 3.45, 'TRY': 0.085, 'RUB': 0.030,
     }
 
     try:
@@ -230,45 +256,62 @@ def get_exchange_rates():
             data = resp.json()
             rates = {'GEL': 1.0}
             for currency, rate in data.get('rates', {}).items():
-                # frankfurter gives rate of X per 1 GEL
-                # we need: how many GEL per 1 X = 1/rate
                 rates[currency] = round(1.0 / rate, 6)
             _exchange_cache['rates'] = rates
             _exchange_cache['timestamp'] = now
             return rates
     except Exception as e:
-        import logging
         logging.getLogger(__name__).warning(f'Exchange rate fetch failed: {e}')
 
     return fallback_rates
 
 
 def convert_to_gel(amount, from_currency):
-    """Convert an amount from the given currency to GEL."""
     if from_currency == 'GEL':
         return amount
     rates = get_exchange_rates()
     rate = rates.get(from_currency.upper(), 1.0)
     return amount * rate
 
+
 def save_profile_photo(file):
-    """Save and optimize a profile photo. Returns filename."""
-    ext = file.filename.rsplit('.', 1)[-1].lower()
-    filename = f"profile_{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
+    """Save and optimize a profile photo. Supports Cloudinary and Local fallback."""
+    try:
+        file.seek(0)
+        file_bytes = file.read()
+        in_memory_file = io.BytesIO(file_bytes)
+        in_memory_file_cloudinary = io.BytesIO(file_bytes)
+    except Exception as e:
+        logger.error(f"Failed reading profile image file buffer: {e}")
+        return None
 
-    img = Image.open(file)
-    img = img.convert('RGB')
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
+        try:
+            ext = file.filename.rsplit('.', 1)[-1].lower() if file.filename else 'jpg'
+            filename = f"profile_{uuid.uuid4().hex}.{ext}"
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
 
-    # Crop to square first
-    min_side = min(img.width, img.height)
-    left = (img.width - min_side) // 2
-    top = (img.height - min_side) // 2
-    img = img.crop((left, top, left + min_side, top + min_side))
+            img = Image.open(in_memory_file)
+            img = img.convert('RGB')
+            min_side = min(img.width, img.height)
+            left = (img.width - min_side) // 2
+            top = (img.height - min_side) // 2
+            img = img.crop((left, top, left + min_side, top + min_side))
+            img = img.resize((400, 400), Image.LANCZOS)
+            img.save(filepath, optimize=True, quality=85)
+            return filename
+        except Exception as e:
+            logger.error(f"Local profile image crop failed: {e}")
+            return None
 
-    # Resize to 400x400
-    img = img.resize((400, 400), Image.LANCZOS)
-    img.save(filepath, optimize=True, quality=85)
-    return filename
+    try:
+        upload_result = cloudinary.uploader.upload(
+            in_memory_file_cloudinary,
+            folder="meetingpoint_profiles"
+        )
+        return upload_result['secure_url']
+    except Exception as e:
+        logger.error(f"Cloudinary profile upload failed: {e}")
+        return None

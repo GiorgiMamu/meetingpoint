@@ -50,9 +50,15 @@
             <tr>
                 <td>
                     <div class="d-flex align-items-center">
-                        <div class="avatar-initials-sm me-2">
-                            {{ user.name.strip()[0].upper() if user.name else '?' }}
-                        </div>
+                        {% if user.profile_photo %}
+                            {% if user.profile_photo.startswith('http') %}
+                                <img class="avatar-img-sm me-2" src="{{ user.profile_photo }}" alt="{{ user.name }}">
+                            {% else %}
+                                <img class="avatar-img-sm me-2" src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}" alt="{{ user.name }}">
+                            {% endif %}
+                        {% else %}
+                            <div class="avatar-initials-sm me-2">{{ user.name.strip()[0].upper() if user.name else '?' }}</div>
+                        {% endif %}
                         <div>
                             <div class="fw-bold">{{ user.name }}</div>
                             <div class="text-muted small">{{ user.email }}</div>

@@ -10,8 +10,13 @@
     <div class="col">
         <div class="card card-event h-100">
             {% if bookmark.event.photo %}
-            <img alt="{{ bookmark.event.title }} event photo"
-                 class="card-img-top" src="{{ url_for('static', filename='uploads/' + bookmark.event.photo) }}">
+                {% if bookmark.event.photo.startswith('http') %}
+                    <img alt="{{ bookmark.event.title }} event photo"
+                         class="card-img-top" src="{{ bookmark.event.photo }}">
+                {% else %}
+                    <img alt="{{ bookmark.event.title }} event photo"
+                         class="card-img-top" src="{{ url_for('static', filename='uploads/' + bookmark.event.photo) }}">
+                {% endif %}
             {% else %}
             <div class="gradient-placeholder">
                 <span class="gradient-placeholder-icon">🗓️</span>

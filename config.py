@@ -43,6 +43,10 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     RATELIMIT_STORAGE_URI = 'memory://'
+    # NOTE: MAIL_SERVER / MAIL_PORT / MAIL_USE_TLS are inherited from Config
+    # (smtp.gmail.com:587 with TLS). Do NOT override them here — a previous
+    # override to 'localhost:25' silently broke all outgoing email in
+    # production, since Render has no local SMTP relay.
 
 
 class TestingConfig(Config):
