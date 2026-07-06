@@ -14,11 +14,19 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <p><strong>Reporter:</strong></p>
+                            {% if report.reporter %}
                             <a href="{{ url_for('main.profile', user_id=report.reporter.id) }}">
                                 {{ report.reporter.name }}
                             </a>
+                            {% else %}
+                            <span class="text-muted">Deleted/anonymous user</span>
+                            {% endif %}
                             <br>
+                            {% if report.reporter %}
                             <small class="text-muted">{{ report.reporter.email }}</small>
+                            {% else %}
+                            <span class="text-muted">Deleted/anonymous user</span>
+                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <p><strong>Status:</strong></p>
@@ -72,7 +80,9 @@
 
                     <div class="mb-3">
                         <p><strong>Reported at:</strong></p>
-                        <p>{{ report.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+                        <p><span data-utc="{{ report.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">
+                                    {{ report.created_at.strftime('%B %d, %Y at %H:%M') }}
+                                </span></p>
                     </div>
                 </div>
             </div>
@@ -131,7 +141,9 @@
                     <div class="card-body">
                         <p class="mb-2"><small><strong>Last updated by:</strong></small></p>
                         <p class="mb-0"><small>{{ report.reviewed_by.name }}</small></p>
-                        <p class="mb-0"><small class="text-muted">{{ report.reviewed_at.strftime('%B %d, %Y %H:%M') }}</small></p>
+                        <p class="mb-0"><small class="text-muted"><span data-utc="{{ report.reviewed_at.strftime('%Y-%m-%dT%H:%M:%S') }}">
+                                    {{ report.reviewed_at.strftime('%B %d, %Y at %H:%M') }}
+                                </span></small></p>
                     </div>
                 </div>
             {% endif %}

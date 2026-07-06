@@ -47,7 +47,9 @@
             </tr>
             <tr>
                 <th>Timestamp</th>
-                <td>{{ log.timestamp.strftime('%B %d, %Y at %H:%M:%S') }}</td>
+                <td><span data-utc="{{ log.timestamp.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ log.timestamp.strftime('%B %d, %Y at %H:%M') }}
+</span></td>
             </tr>
             <tr>
                 <th>User agent</th>

@@ -9,7 +9,9 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 from wtforms.validators import Optional, NumberRange
 
 from app.models import User
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+
 def now_utc():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -142,6 +144,7 @@ class EventForm(FlaskForm):
     ])
     event_time = DateTimeLocalField('Date & Time', format='%Y-%m-%dT%H:%M',
                                     validators=[DataRequired()])
+    tz_offset_minutes = IntegerField('Timezone offset', validators=[Optional()], default=0)
     location_text = SanitizedStringField('Location', validators=[
         Optional(),
         Length(max=255)
@@ -217,8 +220,10 @@ class EventForm(FlaskForm):
 
     def validate_event_time(self, field):
         if field.data:
+            offset = self.tz_offset_minutes.data or 0
+            utc_value = field.data + timedelta(minutes=offset)
             now = now_utc()
-            if field.data <= now:
+            if utc_value <= now:
                 raise ValidationError('Please choose a date and time in the future.')
 
 

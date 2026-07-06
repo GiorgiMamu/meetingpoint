@@ -3,6 +3,7 @@ import math
 import os
 import time
 import uuid
+from datetime import timedelta
 
 import bleach
 import requests
@@ -135,7 +136,7 @@ def send_cancellation_emails(event, participants):
         user = participation.user
         body = f"""Hi {user.name},
 
-Unfortunately, the event "{event.title}" scheduled for {event.event_time.strftime('%B %d, %Y at %H:%M')} has been cancelled by the host.
+Unfortunately, the event "{event.title}" scheduled for {(event.event_time + timedelta(hours=4)).strftime('%B %d, %Y at %H:%M')} has been cancelled by the host.
 
 We're sorry for the inconvenience.
 

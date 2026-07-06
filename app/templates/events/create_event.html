@@ -35,6 +35,8 @@
                         {% for e in form.event_time.errors %}
                         <div class="text-danger small mt-1">{{ e }}</div>
                         {% endfor %}
+                        <input type="hidden" name="tz_offset_minutes" id="tz_offset_minutes" value="0">
+
                     </div>
                     <div class="col-md-6">
                         {{ form.category.label(class="form-label") }}
@@ -162,7 +164,25 @@
 {% block scripts %}
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.getElementById('tz_offset_minutes').value = new Date().getTimezoneOffset();
+</script>
 
+{% if event and not form.errors %}
+<script>
+(function() {
+  var input = document.querySelector('[name="event_time"]');
+  if (input && input.value) {
+    var d = new Date(input.value + 'Z'); // stored value is UTC
+    if (!isNaN(d)) {
+      var pad = n => String(n).padStart(2, '0');
+      input.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+        + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+  }
+})();
+</script>
+{% endif %}
 <script>
     // ── Form validation ──
     document.addEventListener('DOMContentLoaded', function () {
@@ -217,5 +237,6 @@
             }
         });
     });
+
 </script>
 {% endblock %}

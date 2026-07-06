@@ -3,11 +3,12 @@ socket_events.py — Flask-SocketIO event handlers for real-time chat.
 """
 import logging
 from datetime import datetime
-
+from app.models import utcnow
 from flask_login import current_user
 from flask_socketio import join_room, leave_room, emit
 
 logger = logging.getLogger(__name__)
+
 
 
 def register_socket_events(socketio):
@@ -83,7 +84,7 @@ def register_socket_events(socketio):
             event_id=event_id,
             user_id=current_user.id,
             content=content,
-            timestamp=datetime.now()
+            timestamp=utcnow()
         )
         db.session.add(msg)
         db.session.commit()

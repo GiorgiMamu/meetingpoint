@@ -306,8 +306,7 @@ def create_event():
             host_id=current_user.id,
             title=sanitize(form.title.data),
             description=sanitize(form.description.data),
-            event_time=form.event_time.data,
-            location_text=sanitize(form.location_text.data),
+            event_time=form.event_time.data + timedelta(minutes=form.tz_offset_minutes.data or 0),            location_text=sanitize(form.location_text.data),
             lat=lat,
             lng=lng,
             category=form.category.data,
@@ -407,7 +406,7 @@ def edit_event(event_id):
 
         event.title = sanitize(form.title.data)
         event.description = sanitize(form.description.data)
-        event.event_time = form.event_time.data
+        event.event_time = form.event_time.data + timedelta(minutes=form.tz_offset_minutes.data or 0)
         event.location_text = sanitize(form.location_text.data)
         event.lat = form.lat.data
         event.lng = form.lng.data
@@ -1099,7 +1098,7 @@ def join_event(event_id):
         send_email(
             current_user.email,
             f'MeetingPoint — You joined: {event.title}',
-            f'Hi {current_user.name},\n\nyou have successfully joined "{event.title}" on {event.event_time.strftime("%B %d, %Y at %H:%M")}.\n\n— MeetingPoint'
+            f'Hi {current_user.name},\n\nyou have successfully joined "{event.title}" on {(event.event_time+timedelta(hours=4)).strftime('%B %d, %Y at %H:%M')}.\n\n— MeetingPoint'
         )
     else:
         status = 'pending'

@@ -108,7 +108,9 @@
                     {% endif %}
                     {% endif %}
                 </td>
-                <td><small>{{ log.timestamp.strftime('%b %d, %Y %H:%M:%S') }}</small></td>
+                <td><small><span data-utc="{{ log.timestamp.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ log.timestamp.strftime('%B %d, %Y at %H:%M') }}
+</span></small></td>
                 <td>
                     <a href="{{ url_for('main.admin_log_detail', log_id=log.id) }}"
                        class="btn btn-sm btn-outline-primary">View</a>

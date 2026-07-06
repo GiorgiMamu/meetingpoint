@@ -89,9 +89,13 @@
                             <tr>
                                 <td>#{{ report.id }}</td>
                                 <td>
+                                    {% if report.reporter %}
                                     <a href="{{ url_for('main.profile', user_id=report.reporter.id) }}">
                                         {{ report.reporter.name }}
                                     </a>
+                                    {% else %}
+                                    <span class="text-muted">Deleted/anonymous user</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% if report.reported_user_id %}
@@ -112,7 +116,10 @@
                                         <span class="badge bg-secondary">Dismissed</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ report.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+
+                                <td><span data-utc="{{ report.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">
+                                    {{ report.created_at.strftime('%B %d, %Y at %H:%M') }}
+                                </span></td>
                                 <td>
                                     <a href="{{ url_for('main.admin_report_detail', report_id=report.id) }}"
                                         class="btn btn-sm btn-outline-primary">View</a>
