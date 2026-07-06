@@ -38,8 +38,13 @@
     <!-- LEFT COLUMN -->
     <div class="col-lg-8">
         {% if event.photo %}
-        <img alt="{{ event.title }} event photo"
-             class="event-header-img" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+            {% if event.photo.startswith('http') %}
+                <img alt="{{ event.title }} event photo"
+                     class="event-header-img" src="{{ event.photo }}">
+            {% else %}
+                <img alt="{{ event.title }} event photo"
+                     class="event-header-img" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+            {% endif %}
         {% endif %}
         <hr>
         <div style="background: rgba(255,255,255,0.45); border-left: 3px solid var(--forest-dark, #2d6a4f); border-radius: 6px; padding: 14px 18px; margin-bottom: 1rem;">

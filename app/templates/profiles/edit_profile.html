@@ -61,9 +61,15 @@
                     {% endfor %}
                     {% if user.profile_photo %}
                         <div class="mt-2 d-flex align-items-center gap-3">
-                            <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
-                                 class="avatar-img" style="width:60px;height:60px;"
-                                 alt="Current profile photo">
+                            {% if user.profile_photo.startswith('http') %}
+                                <img src="{{ user.profile_photo }}"
+                                     class="avatar-img" style="width:60px;height:60px;object-fit:cover;border-radius:50%;"
+                                     alt="Current profile photo">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
+                                     class="avatar-img" style="width:60px;height:60px;object-fit:cover;border-radius:50%;"
+                                     alt="Current profile photo">
+                            {% endif %}
                             <span class="text-muted small">Current photo — upload a new one to replace it.</span>
                         </div>
                     {% endif %}

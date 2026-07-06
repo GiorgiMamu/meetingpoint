@@ -343,33 +343,45 @@ cloudinary.config(
 )
 
 def save_profile_photo(file):
-    """Uploads and optimizes profile photo directly to Cloudinary."""
+    """Saves profile photo safely without causing infinite recursive depth loops."""
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME'):
+        # Local Fallback path
+        ext = file.filename.rsplit('.', 1)[-1].lower()
+        filename = f"profile_{uuid.uuid4().hex}.{ext}"
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        file.save(os.path.join(upload_folder, filename))
+        return filename
+
     try:
-        # Upload directly to a specific folder on Cloudinary
+        # Seek back to start of file stream to prevent empty data reads
+        file.seek(0)
         upload_result = cloudinary.uploader.upload(
-            file,
-            folder="meetingpoint/profiles",
-            transformation=[
-                {"width": 300, "height": 300, "crop": "fill", "gravity": "face"}, # Automatic face-detection cropping
-                {"quality": "auto", "fetch_format": "auto"} # Automatically compresses image sizes
-            ]
+            file.read(),
+            folder="meetingpoint_profiles"
         )
-        # Return the secure absolute web URL to store in your PostgreSQL user table
+        # We return the direct secure URL string
         return upload_result['secure_url']
     except Exception as e:
         logger.error(f"Cloudinary profile upload failed: {e}")
         return None
 
 def save_event_photo(file):
-    """Uploads and optimizes event banners directly to Cloudinary."""
+    """Saves event banner photos to Cloudinary using an explicit stream reader."""
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME'):
+        # Local Fallback path
+        ext = file.filename.rsplit('.', 1)[-1].lower()
+        filename = f"event_{uuid.uuid4().hex}.{ext}"
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        file.save(os.path.join(upload_folder, filename))
+        return filename
+
     try:
+        file.seek(0)
         upload_result = cloudinary.uploader.upload(
-            file,
-            folder="meetingpoint/events",
-            transformation=[
-                {"width": 800, "height": 450, "crop": "fill"}, # Standard 16:9 banner layout ratio
-                {"quality": "auto", "fetch_format": "auto"}
-            ]
+            file.read(),
+            folder="meetingpoint_events"
         )
         return upload_result['secure_url']
     except Exception as e:
@@ -377,13 +389,12 @@ def save_event_photo(file):
         return None
 
 def delete_event_photo(filename_or_url):
-    """Deletes an event photo from Cloudinary when events are modified or removed."""
-    if not filename_or_url or not filename_or_url.startswith('http'):
+    """Safely cleans up event assets."""
+    if not filename_or_url:
         return
-    try:
-        # Extract the public id out of the full Cloudinary absolute url string
-        # e.g., converts '.../meetingpoint/events/abc123xyz.jpg' to 'meetingpoint/events/abc123xyz'
-        public_id = filename_or_url.split('/upload/')[-1].split('/', 1)[-1].rsplit('.', 1)[0]
-        cloudinary.uploader.destroy(public_id)
-    except Exception as e:
-        logger.error(f"Failed to delete resource from Cloudinary storage: {e}")
+    if filename_or_url.startswith('http'):
+        try:
+            public_id = filename_or_url.split('/')[-1].rsplit('.', 1)[0]
+            cloudinary.uploader.destroy(public_id)
+        except Exception as e:
+            logger.error(f"Cloudinary clear failed: {e}")

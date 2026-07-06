@@ -27,8 +27,11 @@
                 <a class="text-decoration-none text-reset d-block"
                    href="{{ url_for('main.event_detail', event_id=event.id) }}">
                     {% if event.photo %}
-                        <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                             class="card-img-top" alt="{{ event.title }}">
+                        {% if event.photo.startswith('http') %}
+                            <img src="{{ event.photo }}" class="card-img-top" alt="{{ event.title }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}" class="card-img-top" alt="{{ event.title }}">
+                        {% endif %}
                     {% else %}
                         <div class="gradient-placeholder">
                             <span class="gradient-placeholder-icon">🗓️</span>
@@ -112,8 +115,11 @@
                 <a class="text-decoration-none text-reset d-block"
                    href="{{ url_for('main.event_detail', event_id=event.id) }}">
                     {% if event.photo %}
-                        <img src="{{ url_for('static', filename='uploads/' + event.photo) }}"
-                             class="card-img-top" alt="{{ event.title }}">
+                        {% if event.photo.startswith('http') %}
+                            <img src="{{ event.photo }}" class="card-img-top" alt="{{ event.title }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/' + event.photo) }}" class="card-img-top" alt="{{ event.title }}">
+                        {% endif %}
                     {% else %}
                         <div class="gradient-placeholder">
                             <span class="gradient-placeholder-icon">🗓️</span>

@@ -147,8 +147,13 @@
             <a class="text-decoration-none text-reset d-block"
                href="{{ url_for('main.event_detail', event_id=event.id) }}">
                 {% if event.photo %}
-                <img alt="{{ event.title }} event photo"
-                     class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+                    {% if event.photo.startswith('http') %}
+                        <img alt="{{ event.title }} event photo"
+                             class="card-img-top" src="{{ event.photo }}">
+                    {% else %}
+                        <img alt="{{ event.title }} event photo"
+                             class="card-img-top" src="{{ url_for('static', filename='uploads/' + event.photo) }}">
+                    {% endif %}
                 {% else %}
                 <div class="gradient-placeholder">
                     <span class="gradient-placeholder-icon">🗓️</span>

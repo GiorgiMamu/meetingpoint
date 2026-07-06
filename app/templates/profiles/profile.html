@@ -13,8 +13,13 @@
                onmouseout="this.style.opacity='0.5'">🚩</a>
             {% endif %}
             {% if user.profile_photo %}
-            <img alt="{{ user.name }}'s profile photo"
-                 class="avatar-img" src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}">
+                {% if user.profile_photo.startswith('http') %}
+                    <img alt="{{ user.name }}'s profile photo"
+                         class="avatar-img" src="{{ user.profile_photo }}">
+                {% else %}
+                    <img alt="{{ user.name }}'s profile photo"
+                         class="avatar-img" src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}">
+                {% endif %}
             {% else %}
             <div class="avatar-circle">
                 {{ user.name.strip()[0].upper() if user.name and user.name.strip() else '?' }}
