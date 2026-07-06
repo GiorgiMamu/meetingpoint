@@ -3,6 +3,8 @@ import math
 import os
 import time
 import uuid
+import cloudinary
+import cloudinary.uploader
 from datetime import timedelta
 import base64
 import sys
@@ -157,35 +159,35 @@ If you did not request a password reset, ignore this email.
     return send_email(user.email, 'MeetingPoint — Password reset', body)
 
 
-def save_event_photo(file):
-    """Save and optimize an uploaded event photo. Returns the filename."""
-    ext = file.filename.rsplit('.', 1)[-1].lower()
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
-
-    img = Image.open(file)
-    img = img.convert('RGB')
-
-    # Resize to max 1200px width while keeping aspect ratio
-    max_width = 1200
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_height = int(img.height * ratio)
-        img = img.resize((max_width, new_height), Image.LANCZOS)
-
-    img.save(filepath, optimize=True, quality=85)
-    return filename
-
-
-def delete_event_photo(filename):
-    """Delete an event photo from disk."""
-    if not filename:
-        return
-    filepath = os.path.join(current_app.root_path, 'static', 'uploads', filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
+# def save_event_photo(file):
+#     """Save and optimize an uploaded event photo. Returns the filename."""
+#     ext = file.filename.rsplit('.', 1)[-1].lower()
+#     filename = f"{uuid.uuid4().hex}.{ext}"
+#     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+#     os.makedirs(upload_folder, exist_ok=True)
+#     filepath = os.path.join(upload_folder, filename)
+#
+#     img = Image.open(file)
+#     img = img.convert('RGB')
+#
+#     # Resize to max 1200px width while keeping aspect ratio
+#     max_width = 1200
+#     if img.width > max_width:
+#         ratio = max_width / img.width
+#         new_height = int(img.height * ratio)
+#         img = img.resize((max_width, new_height), Image.LANCZOS)
+#
+#     img.save(filepath, optimize=True, quality=85)
+#     return filename
+#
+#
+# def delete_event_photo(filename):
+#     """Delete an event photo from disk."""
+#     if not filename:
+#         return
+#     filepath = os.path.join(current_app.root_path, 'static', 'uploads', filename)
+#     if os.path.exists(filepath):
+#         os.remove(filepath)
 
 
 def send_cancellation_emails(event, participants):
@@ -310,24 +312,78 @@ def convert_to_gel(amount, from_currency):
     rate = rates.get(from_currency.upper(), 1.0)
     return amount * rate
 
+# def save_profile_photo(file):
+#     """Save and optimize a profile photo. Returns filename."""
+#     ext = file.filename.rsplit('.', 1)[-1].lower()
+#     filename = f"profile_{uuid.uuid4().hex}.{ext}"
+#     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+#     os.makedirs(upload_folder, exist_ok=True)
+#     filepath = os.path.join(upload_folder, filename)
+#
+#     img = Image.open(file)
+#     img = img.convert('RGB')
+#
+#     # Crop to square first
+#     min_side = min(img.width, img.height)
+#     left = (img.width - min_side) // 2
+#     top = (img.height - min_side) // 2
+#     img = img.crop((left, top, left + min_side, top + min_side))
+#
+#     # Resize to 400x400
+#     img = img.resize((400, 400), Image.LANCZOS)
+#     img.save(filepath, optimize=True, quality=85)
+#     return filename
+
+
+# Configure Cloudinary credentials out of system environment variables
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
+
 def save_profile_photo(file):
-    """Save and optimize a profile photo. Returns filename."""
-    ext = file.filename.rsplit('.', 1)[-1].lower()
-    filename = f"profile_{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
+    """Uploads and optimizes profile photo directly to Cloudinary."""
+    try:
+        # Upload directly to a specific folder on Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder="meetingpoint/profiles",
+            transformation=[
+                {"width": 300, "height": 300, "crop": "fill", "gravity": "face"}, # Automatic face-detection cropping
+                {"quality": "auto", "fetch_format": "auto"} # Automatically compresses image sizes
+            ]
+        )
+        # Return the secure absolute web URL to store in your PostgreSQL user table
+        return upload_result['secure_url']
+    except Exception as e:
+        logger.error(f"Cloudinary profile upload failed: {e}")
+        return None
 
-    img = Image.open(file)
-    img = img.convert('RGB')
+def save_event_photo(file):
+    """Uploads and optimizes event banners directly to Cloudinary."""
+    try:
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder="meetingpoint/events",
+            transformation=[
+                {"width": 800, "height": 450, "crop": "fill"}, # Standard 16:9 banner layout ratio
+                {"quality": "auto", "fetch_format": "auto"}
+            ]
+        )
+        return upload_result['secure_url']
+    except Exception as e:
+        logger.error(f"Cloudinary event upload failed: {e}")
+        return None
 
-    # Crop to square first
-    min_side = min(img.width, img.height)
-    left = (img.width - min_side) // 2
-    top = (img.height - min_side) // 2
-    img = img.crop((left, top, left + min_side, top + min_side))
-
-    # Resize to 400x400
-    img = img.resize((400, 400), Image.LANCZOS)
-    img.save(filepath, optimize=True, quality=85)
-    return filename
+def delete_event_photo(filename_or_url):
+    """Deletes an event photo from Cloudinary when events are modified or removed."""
+    if not filename_or_url or not filename_or_url.startswith('http'):
+        return
+    try:
+        # Extract the public id out of the full Cloudinary absolute url string
+        # e.g., converts '.../meetingpoint/events/abc123xyz.jpg' to 'meetingpoint/events/abc123xyz'
+        public_id = filename_or_url.split('/upload/')[-1].split('/', 1)[-1].rsplit('.', 1)[0]
+        cloudinary.uploader.destroy(public_id)
+    except Exception as e:
+        logger.error(f"Failed to delete resource from Cloudinary storage: {e}")
