@@ -20,7 +20,7 @@ def upgrade():
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_blocked', sa.Boolean(), nullable=True))
     # Set default value for existing users
-    op.execute("UPDATE users SET is_blocked = 0")
+    op.execute("UPDATE users SET is_blocked = FALSE")
     # ### end Alembic commands ###
 
 
