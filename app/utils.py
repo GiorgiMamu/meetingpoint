@@ -1,4 +1,5 @@
 import html
+import io
 import math
 import os
 import time
@@ -55,7 +56,6 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    # Support pytest suite execution cleanly if environment demands
     import sys
     sender = (
             current_app.config.get('MAIL_USERNAME')
@@ -120,30 +120,43 @@ If you did not request a password reset, ignore this email.
 
 def save_event_photo(file):
     """Save and optimize an uploaded event photo. Supports Cloudinary and Local fallback."""
-    # Fallback to local storage if Cloudinary variables are not configured
-    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
-        ext = file.filename.rsplit('.', 1)[-1].lower()
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-        filepath = os.path.join(upload_folder, filename)
-
-        img = Image.open(file)
-        img = img.convert('RGB')
-        max_width = 1200
-        if img.width > max_width:
-            ratio = max_width / img.width
-            new_height = int(img.height * ratio)
-            img = img.resize((max_width, new_height), Image.LANCZOS)
-
-        img.save(filepath, optimize=True, quality=85)
-        return filename
-
+    # Defend against Python 3.14 gevent stream recursive lookups by reading into memory first
     try:
         file.seek(0)
-        # Force a direct upload to Cloudinary using file stream data
+        file_bytes = file.read()
+        in_memory_file = io.BytesIO(file_bytes)
+        in_memory_file_cloudinary = io.BytesIO(file_bytes)
+    except Exception as e:
+        logger.error(f"Failed reading image file buffer: {e}")
+        return None
+
+    # Fallback to local storage if Cloudinary variables are not configured
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
+        try:
+            ext = file.filename.rsplit('.', 1)[-1].lower() if file.filename else 'jpg'
+            filename = f"{uuid.uuid4().hex}.{ext}"
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
+
+            img = Image.open(in_memory_file)
+            img = img.convert('RGB')
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width, new_height), Image.LANCZOS)
+
+            img.save(filepath, optimize=True, quality=85)
+            return filename
+        except Exception as e:
+            logger.error(f"Local event image optimization failed: {e}")
+            return None
+
+    try:
+        # Pass pure memory stream cleanly to Cloudinary API wrapper
         upload_result = cloudinary.uploader.upload(
-            file,
+            in_memory_file_cloudinary,
             folder="meetingpoint_events"
         )
         return upload_result['secure_url']
@@ -170,7 +183,6 @@ def delete_event_photo(filename_or_url):
 
 
 def send_cancellation_emails(event, participants):
-    """Send cancellation notification to all participants of an event."""
     sent = []
     for participation in participants:
         user = participation.user
@@ -225,7 +237,7 @@ def filter_events_by_radius(events, center_lat, center_lng, radius_km):
 
 
 _exchange_cache = {'rates': {}, 'timestamp': 0}
-_CACHE_TTL = 3600  # 1 hour
+_CACHE_TTL = 3600
 
 
 def get_exchange_rates():
@@ -234,12 +246,7 @@ def get_exchange_rates():
         return _exchange_cache['rates']
 
     fallback_rates = {
-        'GEL': 1.0,
-        'USD': 2.75,
-        'EUR': 2.95,
-        'GBP': 3.45,
-        'TRY': 0.085,
-        'RUB': 0.030,
+        'GEL': 1.0, 'USD': 2.75, 'EUR': 2.95, 'GBP': 3.45, 'TRY': 0.085, 'RUB': 0.030,
     }
 
     try:
@@ -272,27 +279,39 @@ def convert_to_gel(amount, from_currency):
 
 def save_profile_photo(file):
     """Save and optimize a profile photo. Supports Cloudinary and Local fallback."""
-    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
-        ext = file.filename.rsplit('.', 1)[-1].lower()
-        filename = f"profile_{uuid.uuid4().hex}.{ext}"
-        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-        filepath = os.path.join(upload_folder, filename)
-
-        img = Image.open(file)
-        img = img.convert('RGB')
-        min_side = min(img.width, img.height)
-        left = (img.width - min_side) // 2
-        top = (img.height - min_side) // 2
-        img = img.crop((left, top, left + min_side, top + min_side))
-        img = img.resize((400, 400), Image.LANCZOS)
-        img.save(filepath, optimize=True, quality=85)
-        return filename
-
     try:
         file.seek(0)
+        file_bytes = file.read()
+        in_memory_file = io.BytesIO(file_bytes)
+        in_memory_file_cloudinary = io.BytesIO(file_bytes)
+    except Exception as e:
+        logger.error(f"Failed reading profile image file buffer: {e}")
+        return None
+
+    if not os.environ.get('CLOUDINARY_CLOUD_NAME') or cloudinary is None:
+        try:
+            ext = file.filename.rsplit('.', 1)[-1].lower() if file.filename else 'jpg'
+            filename = f"profile_{uuid.uuid4().hex}.{ext}"
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
+
+            img = Image.open(in_memory_file)
+            img = img.convert('RGB')
+            min_side = min(img.width, img.height)
+            left = (img.width - min_side) // 2
+            top = (img.height - min_side) // 2
+            img = img.crop((left, top, left + min_side, top + min_side))
+            img = img.resize((400, 400), Image.LANCZOS)
+            img.save(filepath, optimize=True, quality=85)
+            return filename
+        except Exception as e:
+            logger.error(f"Local profile image crop failed: {e}")
+            return None
+
+    try:
         upload_result = cloudinary.uploader.upload(
-            file,
+            in_memory_file_cloudinary,
             folder="meetingpoint_profiles"
         )
         return upload_result['secure_url']
