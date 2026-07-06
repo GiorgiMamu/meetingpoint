@@ -50,17 +50,20 @@ def create_app(config_name='default'):
     login_manager.login_message_category = 'info'
 
     if not app.config.get('TESTING'):
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler(
-            app.config['LOG_FILE'], maxBytes=10240, backupCount=5, delay=True
-        )
-        file_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-        )
-        file_handler.setFormatter(formatter)
-        app.logger.addHandler(file_handler)
+        try:
+            if not os.path.exists('logs'):
+                os.mkdir('logs')
+            file_handler = RotatingFileHandler(
+                app.config['LOG_FILE'], maxBytes=10240, backupCount=5, delay=True
+            )
+            file_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter(
+                '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+            )
+            file_handler.setFormatter(formatter)
+            app.logger.addHandler(file_handler)
+        except Exception:
+            pass  # file logging not available on some hosts
         app.logger.setLevel(logging.INFO)
         app.logger.info('MeetingPoint startup')
     else:

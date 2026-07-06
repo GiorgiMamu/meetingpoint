@@ -250,3 +250,25 @@ def convert_to_gel(amount, from_currency):
     rates = get_exchange_rates()
     rate = rates.get(from_currency.upper(), 1.0)
     return amount * rate
+
+def save_profile_photo(file):
+    """Save and optimize a profile photo. Returns filename."""
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    filename = f"profile_{uuid.uuid4().hex}.{ext}"
+    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+    os.makedirs(upload_folder, exist_ok=True)
+    filepath = os.path.join(upload_folder, filename)
+
+    img = Image.open(file)
+    img = img.convert('RGB')
+
+    # Crop to square first
+    min_side = min(img.width, img.height)
+    left = (img.width - min_side) // 2
+    top = (img.height - min_side) // 2
+    img = img.crop((left, top, left + min_side, top + min_side))
+
+    # Resize to 400x400
+    img = img.resize((400, 400), Image.LANCZOS)
+    img.save(filepath, optimize=True, quality=85)
+    return filename

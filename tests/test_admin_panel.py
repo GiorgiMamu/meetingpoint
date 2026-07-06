@@ -72,7 +72,7 @@ def test_admin_block_user(client, app):
     assert b'has been blocked' in response.data
 
     with app.app_context():
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         assert user.is_blocked is True
         assert user.is_active is True
 
@@ -81,7 +81,7 @@ def test_admin_block_user(client, app):
     assert b'has been unblocked' in response.data
 
     with app.app_context():
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         assert user.is_blocked is False
         assert user.is_active is True
 
@@ -139,7 +139,7 @@ def test_blocked_user_can_delete_own_event(client, app):
     assert b'Event deleted' in response.data
 
     with app.app_context():
-        assert Event.query.get(event_id) is None
+        assert db.session.get(Event, event_id) is None
 
 
 def test_admin_can_delete_any_event(client, app):
@@ -162,7 +162,7 @@ def test_admin_can_delete_any_event(client, app):
     assert b'Event management' in response.data  # Check we are back on admin events page
 
     with app.app_context():
-        assert Event.query.get(event_id) is None
+        assert db.session.get(Event, event_id) is None
 
 
 def test_admin_no_host_buttons_on_details(client, app):
@@ -204,7 +204,7 @@ def test_admin_cannot_cancel_event_directly(client, app):
     assert response.status_code == 403
 
     with app.app_context():
-        assert Event.query.get(event_id).is_cancelled is False
+        assert db.session.get(Event, event_id).is_cancelled is False
 
 
 def test_admin_delete_user_cascades(client, app):
@@ -229,8 +229,8 @@ def test_admin_delete_user_cascades(client, app):
     assert b'permanently deleted' in response.data
 
     with app.app_context():
-        assert User.query.get(user_id) is None
-        assert Event.query.get(event_id) is None
+        assert db.session.get(User, user_id) is None
+        assert db.session.get(Event, event_id) is None
         assert Bookmark.query.filter_by(user_id=user_id).first() is None
 
 

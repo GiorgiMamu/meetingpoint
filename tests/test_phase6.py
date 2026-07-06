@@ -41,35 +41,61 @@ def create_event(app, host_id):
 
 # ── Rate limiting ──
 
-def test_login_rate_limit(client, app):
-    create_user(app)
-    for _ in range(10):
-        client.post('/login', data={
+def test_login_rate_limit(monkeypatch):
+    from config import TestingConfig
+    monkeypatch.setattr(TestingConfig, 'RATELIMIT_ENABLED', True)
+
+    from app import create_app, db as _db
+    app = create_app('testing')
+
+    with app.app_context():
+        _db.create_all()
+        client = app.test_client()
+
+        create_user(app)
+        for _ in range(10):
+            client.post('/login', data={
+                'email': 'user@example.com',
+                'password': 'wrongpassword'
+            })
+        response = client.post('/login', data={
             'email': 'user@example.com',
             'password': 'wrongpassword'
         })
-    response = client.post('/login', data={
-        'email': 'user@example.com',
-        'password': 'wrongpassword'
-    })
-    assert response.status_code == 429
+        assert response.status_code == 429
+
+        _db.session.remove()
+        _db.drop_all()
 
 
-def test_register_rate_limit(client):
-    for _ in range(5):
-        client.post('/register', data={
+def test_register_rate_limit(monkeypatch):
+    from config import TestingConfig
+    monkeypatch.setattr(TestingConfig, 'RATELIMIT_ENABLED', True)
+
+    from app import create_app, db as _db
+    app = create_app('testing')
+
+    with app.app_context():
+        _db.create_all()
+        client = app.test_client()
+
+        for _ in range(5):
+            client.post('/register', data={
+                'name': 'Test',
+                'email': f'test{_}@example.com',
+                'password': 'password123',
+                'confirm_password': 'password123'
+            })
+        response = client.post('/register', data={
             'name': 'Test',
-            'email': f'test{_}@example.com',
+            'email': 'extra@example.com',
             'password': 'password123',
             'confirm_password': 'password123'
         })
-    response = client.post('/register', data={
-        'name': 'Test',
-        'email': 'extra@example.com',
-        'password': 'password123',
-        'confirm_password': 'password123'
-    })
-    assert response.status_code == 429
+        assert response.status_code == 429
+
+        _db.session.remove()
+        _db.drop_all()
 
 
 # ── CSRF protection ──

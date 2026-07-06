@@ -4,10 +4,11 @@ Organized into sections: general, auth, events, profiles, pages.
 """
 import logging
 import math
+import os
 from datetime import timedelta
 from app.analytics import get_event_analytics, get_host_dashboard_metrics
 from flask import (Blueprint, render_template, redirect, url_for,
-                   flash, request, abort)
+                   flash, request, abort, current_app)
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app import db, bcrypt, limiter, cache
@@ -839,19 +840,24 @@ def profile_following(user_id):
 @main.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 @active_required
-@limiter.limit("10 per minute")
 def edit_profile():
     """Edit the current user's profile."""
+    from app.utils import save_profile_photo
     form = EditProfileForm()
     if form.validate_on_submit():
+        if form.profile_photo.data and hasattr(form.profile_photo.data, 'filename') and form.profile_photo.data.filename:
+            # Delete old photo if exists
+            if current_user.profile_photo:
+                old_path = os.path.join(current_app.root_path, 'static', 'uploads', current_user.profile_photo)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            current_user.profile_photo = save_profile_photo(form.profile_photo.data)
+
         current_user.name = form.name.data
         current_user.bio = form.bio.data
         current_user.location = form.location.data
         current_user.interests = form.interests.data
-        if current_user.is_admin():
-            current_user.is_profile_public = False
-            current_user.is_history_public = False
-        else:
+        if not current_user.is_admin():
             current_user.is_profile_public = form.is_profile_public.data
             current_user.is_history_public = form.is_history_public.data
         db.session.commit()
@@ -866,8 +872,6 @@ def edit_profile():
             form.is_profile_public.data = current_user.is_profile_public
             form.is_history_public.data = current_user.is_history_public
     return render_template('profiles/edit_profile.html', form=form, user=current_user)
-
-
 # ============================================================
 # STATIC PAGES
 # ============================================================
@@ -1201,7 +1205,7 @@ def approve_participant(event_id, user_id):
     db.session.commit()
 
     from app.utils import send_email
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     send_email(
         user.email,
         f'MeetingPoint — Request approved: {event.title}',
@@ -1518,6 +1522,7 @@ def clear_notifications():
     """Delete all notifications for the current user."""
     Notification.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
     db.session.commit()
+    flash('All notifications cleared.', 'info')
     return redirect(url_for('main.notifications'))
 
 

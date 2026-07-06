@@ -3,14 +3,14 @@
    ============================================= */
 
 :root {
-    --forest-dark: #1F3D2B;
-    --forest-light: #4E7A5A;
-    --moss-dark: #3F5F45;
+    --forest-dark: #1f3d3d;
+    --forest-light: #4e7a68;
+    --moss-dark: #3f5f4e;
     --moss-light: #8FAF8B;
     --sky-dark: #3A6F8F;
-    --sky-light: #A9D0E3;
-    --sand-dark: #C2A97A;
-    --sand-light: #F1E6C8;
+    --sky-light: #a9e3ca;
+    --sand-dark: #7ac2a3;
+    --sand-light: #c8f1df;
     --rose-dark: #A06A6A;
     --rose-light: #E6B8B8;
     --charcoal-dark: #1C2733;
@@ -332,7 +332,7 @@ h1, h2, h3, h4, h5 {
 
 .alert-warning {
     background-color: #fff3cd;
-    color: #856404;
+    color: #850442;
 }
 
 /* ── Badges ── */

@@ -5,7 +5,7 @@
     <div class="col-md-6">
         <div class="auth-card">
             <h2 class="text-center mb-4">Edit profile</h2>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.name.label(class="form-label") }}
@@ -53,6 +53,21 @@
                     Admin profiles are private and history is visible only to the admin account.
                 </div>
                 {% endif %}
+                <div class="mb-3">
+                    {{ form.profile_photo.label(class="form-label") }}
+                    {{ form.profile_photo(class="form-control", accept="image/*") }}
+                    {% for e in form.profile_photo.errors %}
+                        <div class="text-danger small mt-1">{{ e }}</div>
+                    {% endfor %}
+                    {% if user.profile_photo %}
+                        <div class="mt-2 d-flex align-items-center gap-3">
+                            <img src="{{ url_for('static', filename='uploads/' + user.profile_photo) }}"
+                                 class="avatar-img" style="width:60px;height:60px;"
+                                 alt="Current profile photo">
+                            <span class="text-muted small">Current photo — upload a new one to replace it.</span>
+                        </div>
+                    {% endif %}
+                </div>
 
                 <div class="d-flex gap-2">
                     {{ form.submit(class="btn btn-primary") }}

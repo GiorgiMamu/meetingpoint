@@ -116,7 +116,7 @@ def get_recommendations(user_id, limit=12, exclude_bookmarked=True):
     Return up to `limit` recommended upcoming public events for the user,
     sorted by relevance score descending.
     """
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return []
 
@@ -181,7 +181,7 @@ def get_mood_based_suggestions(user_id, limit=6, exclude_ids=None):
     user has already joined/bookmarked, or from another recommendation
     list shown on the same page.
     """
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     exclude_ids = set(exclude_ids) if exclude_ids else set()
 

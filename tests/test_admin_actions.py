@@ -112,5 +112,5 @@ def test_admin_can_delete_events(app):
     db.session.commit()
 
     # Verify deletion
-    deleted = Event.query.get(event_id)
+    deleted = db.session.get(Event, event_id)
     assert deleted is None

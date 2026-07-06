@@ -22,7 +22,7 @@ def get_event_analytics(event_id):
     Get comprehensive analytics for a specific event.
     Returns dict with attendance rate, charts, participant counts.
     """
-    event = Event.query.get(event_id)
+    event = db.session.get(Event, event_id)
     if not event:
         return None
 

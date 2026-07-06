@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: meetingpoint
+    runtime: python
+    buildCommand: pip install -r requirements.txt && flask --app run.py db upgrade
+    startCommand: gunicorn --worker-class eventlet -w 1 run:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: meetingpoint-db
+          property: connectionString
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+
+databases:
+  - name: meetingpoint-db
+    plan: free

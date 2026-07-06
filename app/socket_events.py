@@ -3,6 +3,8 @@ socket_events.py — Flask-SocketIO event handlers for real-time chat.
 """
 import logging
 from datetime import datetime
+
+from app import db
 from app.models import utcnow
 from flask_login import current_user
 from flask_socketio import join_room, leave_room, emit
@@ -24,7 +26,7 @@ def register_socket_events(socketio):
         if not event_id or not current_user.is_authenticated:
             return
 
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if not event:
             return
 
@@ -66,7 +68,7 @@ def register_socket_events(socketio):
         if len(content) > 1000:
             content = content[:1000]
 
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if not event:
             return
 
@@ -114,11 +116,11 @@ def register_socket_events(socketio):
         if not msg_id or not event_id or not current_user.is_authenticated:
             return
 
-        msg = Message.query.get(msg_id)
+        msg = db.session.get(Message, msg_id)
         if not msg or msg.event_id != event_id:
             return
 
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if not event:
             return
 

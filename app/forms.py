@@ -236,6 +236,10 @@ class EditProfileForm(FlaskForm):
         Optional(),
         Length(max=500)
     ])
+    profile_photo = FileField('Profile photo', validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only.')
+    ])
     location = SanitizedStringField('Location', validators=[
         Optional(),
         Length(max=150)
