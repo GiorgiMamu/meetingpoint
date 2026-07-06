@@ -38,7 +38,7 @@ def register_socket_events(socketio):
             status='approved'
         ).first() is not None
 
-        if not (is_host or is_participant):
+        if not (is_host or is_participant or current_user.is_admin()):
             return
 
         room = f'event_{event_id}'
@@ -79,7 +79,7 @@ def register_socket_events(socketio):
             status='approved'
         ).first() is not None
 
-        if not (is_host or is_participant):
+        if not (is_host or is_participant or current_user.is_admin()):
             return
 
         msg = Message(

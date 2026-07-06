@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% block title %}{{ event.title }} — MeetingPoint{% endblock %}
 {% block content %}
@@ -103,6 +104,10 @@
                         🗑️ Delete event
                     </button>
                 </form>
+                {% elif current_user.is_admin() %}
+                <div class="alert alert-secondary mb-2">🛡️ Admin view — you can see and message here without joining.</div>
+                <a class="btn btn-outline-primary w-100 mb-2"
+                   href="{{ url_for('main.event_chat', event_id=event.id) }}">💬 Open chat</a>
                 {% elif user_participation %}
                 {% if user_participation.status == 'pending' %}
                 <div class="alert alert-warning mb-0">⏳ Your request is pending approval.</div>
@@ -143,6 +148,7 @@
                 {% endif %}
             </div>
         </div>
+
 
         <!-- Capacity card — compact inline layout -->
         {% if event.capacity_max %}

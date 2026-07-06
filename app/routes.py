@@ -1052,6 +1052,10 @@ def join_event(event_id):
     """Join a public event."""
     event = Event.query.get_or_404(event_id)
 
+    if current_user.is_admin() and event.host_id != current_user.id:
+        flash('Admins have full visibility into events and don\'t need to join.', 'info')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+
     if event.is_cancelled:
         flash('This event has been cancelled.', 'danger')
         return redirect(url_for('main.event_detail', event_id=event_id))
@@ -1449,7 +1453,7 @@ def event_chat(event_id):
         status='approved'
     ).first() is not None
 
-    if not (is_host or is_participant):
+    if not (is_host or is_participant or current_user.is_admin()):
         flash('You must be an approved participant to access this chat.', 'danger')
         return redirect(url_for('main.event_detail', event_id=event_id))
 
