@@ -56,7 +56,6 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    import sys
     sender = (
             current_app.config.get('MAIL_USERNAME')
             or current_app.config.get('MAIL_DEFAULT_SENDER')
@@ -68,10 +67,6 @@ def send_email(to, subject, body):
         )
         return None
 
-    if 'pytest' in sys.modules:
-        msg = Message(subject=subject, sender=sender, recipients=[to], body=body)
-        return msg
-
     msg = Message(
         subject=subject,
         sender=sender,
@@ -80,10 +75,12 @@ def send_email(to, subject, body):
     )
 
     if not current_app.config.get('TESTING'):
-        mail.send(msg)
+        try:
+            mail.send(msg)
+        except Exception as e:
+            logging.getLogger(__name__).error(f'Failed to send email to {to}: {e}')
 
     return msg
-
 
 def send_verification_email(user):
     token = generate_token(user.email, salt='email-confirm')
