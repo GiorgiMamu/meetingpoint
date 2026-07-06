@@ -170,6 +170,23 @@
             });
         }
     });
+
+
+    // Convert all UTC times to local timezone
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-utc]').forEach(function(el) {
+            var utcStr = el.getAttribute('data-utc');
+            if (!utcStr) return;
+            var d = new Date(utcStr + 'Z'); // append Z to treat as UTC
+            if (isNaN(d)) return;
+            var options = {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            };
+            el.textContent = d.toLocaleString(undefined, options);
+        });
+    });
+
 </script>
 {% block scripts %}{% endblock %}
 </body>

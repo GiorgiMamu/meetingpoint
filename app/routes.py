@@ -4,7 +4,7 @@ Organized into sections: general, auth, events, profiles, pages.
 """
 import logging
 import math
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app.analytics import get_event_analytics, get_host_dashboard_metrics
 from flask import (Blueprint, render_template, redirect, url_for,
                    flash, request, abort)
@@ -19,6 +19,11 @@ from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails,
                        geocode_location, filter_events_by_radius, convert_to_gel)
+
+from datetime import datetime, timezone
+
+def now_utc():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
@@ -729,7 +734,7 @@ def my_events():
 @login_required
 def history():
     """Show past and upcoming events the user has participated in."""
-    now = datetime.now()
+    now = now_utc()
     participations = Participation.query.filter_by(
         user_id=current_user.id,
         status='approved'
@@ -1805,7 +1810,7 @@ def admin_update_report(report_id):
 
     if new_status in ['open', 'reviewed', 'resolved', 'dismissed']:
         report.status = new_status
-        report.reviewed_at = datetime.now()
+        report.reviewed_at = now_utc()
         report.reviewed_by_id = current_user.id
         report.admin_notes = admin_notes
         db.session.commit()

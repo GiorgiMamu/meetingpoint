@@ -9,6 +9,9 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 from wtforms.validators import Optional, NumberRange
 
 from app.models import User
+from datetime import datetime, timezone
+def now_utc():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # bcrypt only considers the first 72 bytes of the password, the underlying
 # `bcrypt` package raises ValueError for longer passwords to avoid silent
@@ -214,8 +217,7 @@ class EventForm(FlaskForm):
 
     def validate_event_time(self, field):
         if field.data:
-            from datetime import datetime
-            now = datetime.now()
+            now = now_utc()
             if field.data <= now:
                 raise ValidationError('Please choose a date and time in the future.')
 

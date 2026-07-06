@@ -63,7 +63,9 @@
                         {% endif %}
                     </div>
                 </td>
-                <td class="small">{{ event.event_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="small"><span data-utc="{{ event.event_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ event.event_time.strftime('%B %d, %Y at %H:%M') }}
+</span></td>
                 <td>
                     <span class="badge bg-info text-dark">{{ event.category }}</span>
                 </td>

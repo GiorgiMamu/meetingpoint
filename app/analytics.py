@@ -5,7 +5,7 @@ Uses pandas, numpy, and matplotlib for data analysis and visualization
 
 import base64
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 import matplotlib
 matplotlib.use('Agg')  # non-interactive backend, safe for background threads
@@ -229,7 +229,7 @@ def get_host_dashboard_metrics(host_id):
             'past_events': [],
         }
 
-    now = datetime.now()
+    now =  datetime.now(timezone.utc).replace(tzinfo=None)
     upcoming = [e for e in events if e.event_time >= now]
     past = [e for e in events if e.event_time < now]
 

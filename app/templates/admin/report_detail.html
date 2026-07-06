@@ -64,7 +64,9 @@
                                 {{ report.reported_event.title }}
                             </a>
                             <br>
-                            <small class="text-muted">{{ report.reported_event.event_time.strftime('%B %d, %Y %H:%M') }}</small>
+                            <small class="text-muted"><span data-utc="{{ event.event_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ event.event_time.strftime('%B %d, %Y at %H:%M') }}
+</span></small>
                         </div>
                     {% endif %}
 

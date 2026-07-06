@@ -6,7 +6,9 @@
 <!-- Title, meta, badges — full width above the two columns -->
 <h1 class="mb-1">{{ event.title }}</h1>
 <p class="event-meta">
-    📅 <strong>{{ event.event_time.strftime('%B %d, %Y at %H:%M') }}</strong>
+    📅 <strong><span data-utc="{{ event.event_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ event.event_time.strftime('%B %d, %Y at %H:%M') }}
+</span></strong>
     {% if event.location_text %} &nbsp;·&nbsp; 📍 {{ event.location_text }}{% endif %}
 </p>
 {% if event.is_cancelled %}

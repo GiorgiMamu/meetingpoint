@@ -3,7 +3,8 @@ scheduler.py — Background task scheduler for MeetingPoint.
 Handles event reminders sent 24 hours before event start.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+GEORGIA_TZ_OFFSET = timedelta(hours=4)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def send_reminders(app):
         from app.models import Event, Participation, Notification
         from app.utils import send_email
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         window_start = now + timedelta(hours=23)
         window_end = now + timedelta(hours=25)
 
@@ -63,10 +64,11 @@ def send_reminders(app):
                     ).first()
                     if existing:
                         continue
+                    local_time = event.event_time + GEORGIA_TZ_OFFSET
 
                     body = f"""Hi {user.name},
 
-This is a reminder that the event "{event.title}" is happening tomorrow at {event.event_time.strftime('%H:%M')}.
+This is a reminder that the event "{event.title}" is happening tomorrow at {local_time.strftime('%H:%M')}.
 
 {"📍 " + event.location_text if event.location_text else ""}
 

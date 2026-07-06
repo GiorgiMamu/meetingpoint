@@ -1,4 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
+def utcnow():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 from flask_login import UserMixin
 from app import db, login_manager
 
@@ -28,7 +32,7 @@ class User(UserMixin, db.Model):
     is_blocked = db.Column(db.Boolean, default=False)
     is_profile_public = db.Column(db.Boolean, default=True)
     is_history_public = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
     password_reset_token = db.Column(db.String(255), nullable=True)
 
     events = db.relationship('Event', backref='host', lazy=True,
@@ -89,7 +93,7 @@ class Event(db.Model):
     currency = db.Column(db.String(10), default='GEL')
     approval_mode = db.Column(db.String(20), default='automatic')
     participant_list_visible = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     participations = db.relationship('Participation', backref='event', lazy=True,
                                      cascade='all, delete-orphan')
@@ -126,7 +130,7 @@ class Participation(db.Model):
         nullable=False
     )
     status = db.Column(db.String(20), default='pending')
-    joined_at = db.Column(db.DateTime, default=datetime.now)
+    joined_at = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<Participation user={self.user_id} event={self.event_id}>'
@@ -144,7 +148,7 @@ class Message(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.now)
+    timestamp = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<Message event={self.event_id} user={self.user_id}>'
@@ -160,7 +164,7 @@ class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<Bookmark user={self.user_id} event={self.event_id}>'
@@ -177,7 +181,7 @@ class Follow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<Follow {self.follower_id} -> {self.followed_id}>'
@@ -197,7 +201,7 @@ class Notification(db.Model):
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     related_event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
     actor_user = db.relationship('User', foreign_keys=[actor_user_id], lazy='joined')
 
     def __repr__(self):
@@ -217,7 +221,7 @@ class Report(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    reporter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reporter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     reported_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     reported_event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
 
@@ -226,7 +230,7 @@ class Report(db.Model):
     status = db.Column(db.String(20), default='open')  # "open", "reviewed", "resolved", "dismissed"
 
     admin_notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=utcnow)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
@@ -257,7 +261,7 @@ class AuditLog(db.Model):
     ip_address = db.Column(db.String(50))
     user_agent = db.Column(db.String(255))
     status_code = db.Column(db.Integer, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
+    timestamp = db.Column(db.DateTime, default=utcnow, index=True)
 
     user = db.relationship('User', backref='audit_logs')
 
@@ -278,7 +282,7 @@ class SystemMetric(db.Model):
     metric_name = db.Column(db.String(100), nullable=False)  # "total_users", "total_events", "avg_attendance", etc.
     metric_value = db.Column(db.Float, nullable=False)
     extra_data = db.Column(db.String(500))  # JSON string for extra data (renamed from 'metadata')
-    timestamp = db.Column(db.DateTime, default=datetime.now)
+    timestamp = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<SystemMetric {self.metric_name}={self.metric_value}>'

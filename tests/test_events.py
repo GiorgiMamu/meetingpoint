@@ -1,7 +1,10 @@
 import io
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
+
+def now_utc():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from PIL import Image
 
 from app import db, bcrypt
@@ -24,7 +27,7 @@ def login(client, email='host@example.com', password='password123'):
 
 
 def create_event_data(future_minutes=60):
-    future_time = (datetime.now() + timedelta(minutes=future_minutes))
+    future_time = (now_utc() + timedelta(minutes=future_minutes))
     return {
         'title': 'Test Event',
         'description': 'A test event',
@@ -128,7 +131,7 @@ def test_delete_event_removes_bookmarks(client, app):
         event = Event(
             host_id=host_id,
             title='Bookmarked Event',
-            event_time=datetime.now() + timedelta(hours=1)
+            event_time=now_utc()+ timedelta(hours=1)
         )
         db.session.add(event)
         db.session.commit()

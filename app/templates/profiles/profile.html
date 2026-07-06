@@ -87,7 +87,9 @@
                href="{{ url_for('main.event_detail', event_id=event.id) }}">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong>{{ event.title }}</strong>
-                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
+                    <small class="text-muted"><span data-utc="{{ event.event_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ event.event_time.strftime('%B %d, %Y at %H:%M') }}
+</span></small>
                 </div>
             </a>
             {% endfor %}
@@ -105,7 +107,9 @@
                href="{{ url_for('main.event_detail', event_id=event.id) }}">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong>{{ event.title }}</strong>
-                    <small class="text-muted">{{ event.event_time.strftime('%b %d, %Y') }}</small>
+                    <small class="text-muted"><span data-utc="{{ event.event_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+    {{ event.event_time.strftime('%B %d, %Y at %H:%M') }}
+</span></small>
                 </div>
             </a>
             {% endfor %}

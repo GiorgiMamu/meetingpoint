@@ -3,7 +3,7 @@ recommendations.py - Event recommendation engine
 Implements interest-based, history-based, location and time recommendations
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.models import Event, User, Participation, Bookmark
@@ -105,7 +105,7 @@ def score_event(user, event, past_events, user_interests, user_locations, user_h
     # Decays linearly over a 30-day window instead of a ~10-day cliff, so
     # "recency" behaves like a gradual signal rather than an on/off switch.
     RECENCY_WINDOW_DAYS = 30
-    days_old = max(0, (datetime.now() - event.created_at).days)
+    days_old = max(0, (datetime.now(timezone.utc).replace(tzinfo=None) - event.created_at).days)
     score += max(0.0, 10 * (1 - days_old / RECENCY_WINDOW_DAYS))
 
     return min(100.0, score)
@@ -130,7 +130,7 @@ def get_recommendations(user_id, limit=12, exclude_bookmarked=True):
         }
         joined_ids.update(bookmarked_ids)
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Candidate events. `.in_()` on an empty set correctly matches no rows,
     # so we always use a real SQLAlchemy expression here instead of the
@@ -182,7 +182,7 @@ def get_mood_based_suggestions(user_id, limit=6, exclude_ids=None):
     list shown on the same page.
     """
     user = User.query.get(user_id)
-    now = datetime.now()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     exclude_ids = set(exclude_ids) if exclude_ids else set()
 
     if not user or not user.interests:
@@ -230,7 +230,7 @@ def get_mood_based_suggestions(user_id, limit=6, exclude_ids=None):
 
 def get_trending_events(limit=12):
     """Return events with the most joins in the last 7 days."""
-    now = datetime.now()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     week_ago = now - timedelta(days=7)
 
     # The join-count filter is applied in the ON clause (via the join
