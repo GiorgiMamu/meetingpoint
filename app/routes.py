@@ -533,16 +533,14 @@ def discover():
     if active_filters:
         logger.info(f'Search query: {active_filters}')
 
-    is_admin_flag = current_user.is_authenticated and current_user.is_admin
+    should_cache = not current_user.is_authenticated  # only cache for anonymous visitors
 
-    # Cache identical non-radius searches
     cache_key = (
         f"discover:{keyword}:{category}:{date_from}:{date_to}:"
         f"{mood}:{size_min}:{size_max}:{price_max}:{free_only}:{page}"
-        f"admin={is_admin_flag}"
     )
 
-    cached = cache.get(cache_key)
+    cached = cache.get(cache_key) if should_cache else None
     if cached and not (radius_km and center_lat and center_lng):
         return cached
 
@@ -674,7 +672,7 @@ def discover():
     )
 
     # Radius search is not cached because it depends on dynamic coordinates
-    if not (radius_km and center_lat and center_lng):
+    if should_cache and not (radius_km and center_lat and center_lng):
         cache.set(cache_key, result, timeout=60)
 
     return result

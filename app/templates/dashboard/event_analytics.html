@@ -66,28 +66,27 @@
             </div>
         {% endif %}
     </div>
-
-    <div class="row mb-4 align-items-start">
+    <div class="row mb-4 align-items-start justify-content-center">
+        {% if analytics.capacity_chart %}
         <div class="col-md-6 mb-3">
-            {% if analytics.capacity_chart %}
             <div class="card h-100">
                 <div class="card-body text-center">
                     <h6 class="section-title">Capacity utilization</h6>
                     <img src="{{ analytics.capacity_chart }}" class="img-fluid">
                 </div>
             </div>
-            {% endif %}
         </div>
+        {% endif %}
+        {% if analytics.status_chart %}
         <div class="col-md-6 mb-3">
-            {% if analytics.status_chart %}
             <div class="card h-100">
                 <div class="card-body text-center">
                     <h6 class="section-title">Status distribution</h6>
                     <img src="{{ analytics.status_chart }}" class="img-fluid">
                 </div>
             </div>
-            {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <!-- Approval Queue -->
