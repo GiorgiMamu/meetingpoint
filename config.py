@@ -43,6 +43,9 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     RATELIMIT_STORAGE_URI = 'memory://'
+    MAIL_SERVER = 'localhost'
+    MAIL_PORT = 25
+    MAIL_USE_TLS = False
 
 
 class TestingConfig(Config):
