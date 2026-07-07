@@ -1,3 +1,4 @@
+import base64
 import html
 import io
 import math
@@ -6,6 +7,7 @@ import time
 import uuid
 import logging
 from datetime import timedelta
+from email.mime.text import MIMEText
 
 import bleach
 import requests
@@ -56,31 +58,74 @@ def verify_token(token, salt, max_age=3600):
 
 
 def send_email(to, subject, body):
-    sender = (
-            current_app.config.get('MAIL_USERNAME')
-            or current_app.config.get('MAIL_DEFAULT_SENDER')
-    )
+    sender = current_app.config.get('MAIL_DEFAULT_SENDER') or "meetingpoint.info1@gmail.com"
 
     if not sender:
-        logging.getLogger(__name__).warning(
-            f'Email not sent to {to}: no sender configured.'
-        )
+        logging.getLogger(__name__).warning(f'Email not sent to {to}: no sender configured.')
         return None
 
-    msg = Message(
-        subject=subject,
-        sender=sender,
-        recipients=[to],
-        body=body
-    )
+    # 1. FOR LOCAL TESTING: Keep flask_mail so your mock tests pass cleanly
+    if current_app.config.get('TESTING'):
+        from flask_mail import Message
+        msg = Message(subject=subject, sender=sender, recipients=[to], body=body)
+        mail.send(msg)
+        return msg
 
-    if not current_app.config.get('TESTING'):
-        try:
-            mail.send(msg)
-        except Exception as e:
-            logging.getLogger(__name__).error(f'Failed to send email to {to}: {e}')
+    # 2. FOR PRODUCTION ON RENDER: Send strictly via Gmail HTTPS REST API
+    client_id = os.environ.get('GOOGLE_CLIENT_ID')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
 
-    return msg
+    if not all([client_id, client_secret, refresh_token]):
+        logging.getLogger(__name__).error("Gmail API credentials missing from environment variables!")
+        return None
+
+    try:
+        # Request a fresh access token using your refresh token via HTTPS
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token"
+        }
+        token_response = requests.post(token_url, data=token_data, timeout=5)
+        token_response_data = token_response.json()
+
+        if "access_token" not in token_response_data:
+            logging.getLogger(__name__).error(f"Failed to refresh Google Token: {token_response_data}")
+            return None
+
+        access_token = token_response_data["access_token"]
+
+        # Build the MIME email message
+        message = MIMEText(body)
+        message['to'] = to
+        message['from'] = sender
+        message['subject'] = subject
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+        # Send the email via Gmail API REST endpoint over Port 443
+        gmail_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        payload = {"raw": raw_message}
+
+        response = requests.post(gmail_url, headers=headers, json=payload, timeout=5)
+
+        if response.status_code == 200:
+            logging.getLogger(__name__).info(f"Email successfully sent via Gmail HTTPS API to {to}")
+            return response.json()
+        else:
+            logging.getLogger(__name__).error(
+                f"Gmail API delivery rejected: status {response.status_code} - {response.text}")
+            return None
+
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Failed to send email to {to} via Gmail API: {e}")
+        return None
 
 def send_verification_email(user):
     token = generate_token(user.email, salt='email-confirm')
