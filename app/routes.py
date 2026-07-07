@@ -1701,7 +1701,7 @@ def event_dashboard(event_id):
 def discover_recommended():
     """
     Discover page with personalized recommendations.
-    If user is logged in, show recommendations + mood-based suggestions.
+    If user is logged in, show recommendations + mood-based suggestions (excluding hosted events).
     Otherwise show trending events.
     """
     page = request.args.get('page', 1, type=int)
@@ -1726,17 +1726,26 @@ def discover_recommended():
     if current_user.is_authenticated and current_user.is_active:
         from app.recommendations import get_recommendations, get_mood_based_suggestions
 
-        recommendations = get_recommendations(current_user.id, limit=per_page * 10)
+        # Fetch basic list from engine
+        raw_recommendations = get_recommendations(current_user.id, limit=per_page * 10)
+
+        # 1. Filter out events where the user is the host
+        recommendations = [
+            (event, score) for event, score in raw_recommendations
+            if event.host_id != current_user.id
+        ]
 
         # Pass the main recommendation IDs in directly so mood suggestions
-        # are guaranteed disjoint from them (previously this was done with
-        # a list comprehension *after* the call, but get_mood_based_suggestions
-        # could also independently include events the user already
-        # joined/bookmarked — now handled inside the function itself).
         rec_ids = {e.id for e, s in recommendations}
-        mood_suggestions = get_mood_based_suggestions(
+        raw_mood_suggestions = get_mood_based_suggestions(
             current_user.id, limit=6, exclude_ids=rec_ids
         )
+
+        # 2. Filter out events where the user is the host from mood recommendations
+        mood_suggestions = [
+            event for event in raw_mood_suggestions
+            if event.host_id != current_user.id
+        ]
     else:
         from app.recommendations import get_trending_events
 
@@ -1747,10 +1756,10 @@ def discover_recommended():
         mood_suggestions = []
 
     # Pagination
-    total       = len(recommendations)
+    total = len(recommendations)
     total_pages = math.ceil(total / per_page) if total > 0 else 1
-    start       = (page - 1) * per_page
-    paginated   = recommendations[start:start + per_page]
+    start = (page - 1) * per_page
+    paginated = recommendations[start:start + per_page]
 
     return render_template(
         'events/discover_recommended.html',
@@ -1765,7 +1774,6 @@ def discover_recommended():
         prev_num=page - 1,
         next_num=page + 1,
     )
-
 # ============================================================
 # ADMIN PANEL - REPORTS
 # ============================================================
