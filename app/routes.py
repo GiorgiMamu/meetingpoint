@@ -15,7 +15,7 @@ from app import db, bcrypt, limiter, cache
 from app.decorators import admin_required, host_required, active_required, not_blocked_required
 from app.forms import (RegistrationForm, LoginForm, RequestPasswordResetForm,
                        ResetPasswordForm, EventForm, EditProfileForm, BCRYPT_PASSWORD_TOO_LONG_MESSAGE, ReportForm)
-from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message
+from app.models import User, Event, Participation, Notification, Bookmark, Follow, Message, AuditLog
 from app.utils import (send_verification_email, send_password_reset_email,
                        verify_token, sanitize, save_event_photo,
                        delete_event_photo, send_cancellation_emails,
@@ -939,12 +939,36 @@ def admin_delete_user(user_id):
         return redirect(url_for('main.admin_users'))
 
     name = user.name
+
+    from app.models import Report
+
+    # These FKs have no cascade from User — detach them instead of
+    # blocking the delete, so notification/report/audit history is preserved.
+    Notification.query.filter_by(actor_user_id=user_id).update(
+        {'actor_user_id': None}, synchronize_session=False
+    )
+    Report.query.filter_by(reporter_id=user_id).update(
+        {'reporter_id': None}, synchronize_session=False
+    )
+    Report.query.filter_by(reported_user_id=user_id).update(
+        {'reported_user_id': None}, synchronize_session=False
+    )
+    Report.query.filter_by(reviewed_by_id=user_id).update(
+        {'reviewed_by_id': None}, synchronize_session=False
+    )
+    AuditLog.query.filter_by(user_id=user_id).update(
+        {'user_id': None}, synchronize_session=False
+    )
+
+    # Everything else (events, participations, bookmarks, their own
+    # notifications, messages, follows) is handled by the cascade='all,
+    # delete-orphan' relationships already defined on User.
     db.session.delete(user)
     db.session.commit()
+
     logger.info(f'User {user_id} deleted by admin {current_user.id}')
     flash(f'User {name} has been permanently deleted.', 'success')
     return redirect(request.referrer or url_for('main.admin_users'))
-
 
 # ============================================================
 # ERROR HANDLERS
