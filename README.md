@@ -1,6 +1,9 @@
 # What is MeetingPoint?
 
 When you arrive in a new city and know nobody but still want to participate in some activities, there should be an easy way to find like-minded people. This project aims to fill the gap for casual meet-ups or gatherings made by regular people like you. It will allow any user to browse or create events of any kind – be it a movie night, a hike, or even a trip if such a prospect arises. Anyone who’s interested and is able to use a browser may benefit from it. A website with this kind of idea at the core would be quite unique among similar apps, as others are mostly focused on big events hosted by larger organizations (especially for a fee), or only offer a mobile app. This project proposes MeetingPoint, a comprehensive web-based platform designed to support both event discovery and event management within a unified user experience.
+
+- demo - https://meetingpoint-umwe.onrender.com/
+
 # MeetingPoint
 
 A social event discovery and management web platform built with Flask. Users can create, discover and join local events, chat with participants, follow other users and receive personalised recommendations.
